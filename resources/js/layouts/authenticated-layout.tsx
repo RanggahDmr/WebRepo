@@ -1,7 +1,7 @@
 import { Link, usePage } from "@inertiajs/react";
 import { PropsWithChildren, ReactNode } from "react";
 import route from "@/lib/route";
-
+import FlashMessage from "@/components/ui/FlashMessage";
 export default function AuthenticatedLayout({
   header,
   children,
@@ -16,6 +16,7 @@ export default function AuthenticatedLayout({
 
   return (
     <div className="h-screen w-full bg-gray-100 flex flex-col overflow-hidden">
+      <FlashMessage/>
       {/* TOPBAR */}
       <div className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
