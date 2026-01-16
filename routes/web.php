@@ -1,9 +1,11 @@
 <?php
 
-use App\Http\Controllers\EpicPageController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EpicPageController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\TaskController;
+
 
 
 Route::get('/', fn () => redirect()->route('dashboard'));
@@ -16,39 +18,44 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
 });
 
-Route::post('/logout', [LoginController::class, 'destroy'])
-    ->middleware('auth')
-    ->name('logout');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [EpicPageController::class, 'index'])->name('dashboard');
-    Route::get('/epics/{epic}', [EpicPageController::class, 'show'])->name('epics.show');
 
-    Route::post('/epics', [EpicPageController::class, 'store'])
-        ->middleware('role:PM')
-        ->name('epics.store');
+    Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
-    Route::patch('/epics/{epic}', [EpicController::class, 'dashboardUpdate'])
-        ->middleware('role:PM')
-        ->name('epics.update');
 
-    Route::patch('/epics/{epic}', [EpicPageController::class, 'update'])
-        ->middleware('role:PM')
-        ->name('epics.update');
+    Route::get('/dashboard', [EpicPageController::class, 'index'])
+        ->name('dashboard');
 
-});
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/epics/{epic}', [EpicPageController::class, 'Show'])
+    Route::get('/epics/{epic}', [EpicPageController::class, 'show'])
         ->name('epics.show');
-        // Story create (PM only)
-    Route::post('/epics/{epic}/stories', [EpicPageController::class, 'storeStory'])
-        ->middleware('role:PM')
-        ->name('epics.stories.store');
 
-    // Story update (PM only)
-    Route::patch('/stories/{story}', [EpicPageController::class, 'updateStory'])
-        ->middleware('role:PM')
-        ->name('stories.update');
+ 
+    Route::middleware('role:PM')->group(function () {
+
+        Route::post('/epics', [EpicPageController::class, 'store'])
+            ->name('epics.store');
+
+        Route::patch('/epics/{epic}', [EpicPageController::class, 'update'])
+            ->name('epics.update');
+
+        Route::post('/epics/{epic}/stories', [EpicPageController::class, 'storeStory'])
+            ->name('stories.store');
+
+        Route::patch('/stories/{story}', [EpicPageController::class, 'updateStory'])
+            ->name('stories.update');
+    });
+
+   
+Route::get('/stories/{story}', [StoryController::class, 'show'])
+  ->name('stories.show');
+
+
+Route::get(
+    '/stories/{story}/tasks',
+    [TaskController::class, 'index']
+)->name('tasks.index');
+
+
+
 });
-
