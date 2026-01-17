@@ -7,12 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class Task extends Model
 {
     protected $fillable = [
-        'story_id',
-        'title',
-        'status',
-        'position',
-        'assignee_id',
-    ];
+    'story_id',
+    'type',
+    'title',
+    'description',
+    'status',
+    'position',
+    'assignee_id',
+];
+
 
     public function story()
     {

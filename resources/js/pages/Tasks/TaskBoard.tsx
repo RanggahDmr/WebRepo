@@ -1,10 +1,26 @@
 import AuthenticatedLayout from "@/layouts/authenticated-layout";
+import { DndContext } from "@dnd-kit/core";
+import { router, usePage } from "@inertiajs/react";
+import { useTaskDnD } from "./useTaskDnD";
+import route from "@/lib/route";
+import { DragEndEvent } from "@dnd-kit/core";
+import TaskColumn from "./TaskColumn";
+import { useState } from "react";
+import CreateTaskModal from "./CreateTaskModal";
+// import TaskDetailModal from "./TaskDetailModal";
+
+
+type TaskType = "FE" | "BE" | "QA";
+type TaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
 
 type Task = {
   id: number;
+  type: TaskType;
   title: string;
-  status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+  description?: string | null;
+  status: TaskStatus;
 };
+
 
 type Story = {
   id: number;
@@ -18,6 +34,8 @@ const STATUSES = [
   { key: "DONE", label: "DONE" },
 ] as const;
 
+
+
 function TaskBoard({
   story,
   tasks,
@@ -25,6 +43,13 @@ function TaskBoard({
   story: Story;
   tasks: Task[];
 }) {
+    const { auth }: any = usePage().props;
+    const canCreate = ["PM", "SAD"].includes(auth.user.role);
+    const role = auth.user.role;
+    const [openCreate, setOpenCreate] = useState(false);
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+
   const grouped = STATUSES.reduce(
     (acc, s) => {
       acc[s.key] = tasks.filter((t) => t.status === s.key);
@@ -32,6 +57,53 @@ function TaskBoard({
     },
     {} as Record<Task["status"], Task[]>
   );
+
+const canMoveTo = (toStatus: string) => {
+  if (role === "PROGRAMMER") {
+    return ["IN_PROGRESS", "IN_REVIEW"].includes(toStatus);
+  }
+  if (["PM", "SAD"].includes(role)) return true;
+  return false; 
+};
+
+
+// const { handleDragEnd } = useTaskDnD(tasks, (taskId, status, position) => {
+//   if (!canMoveTo(status)) return;
+
+//   router.patch(route("tasks.update", taskId), {
+//     status,
+//     position,
+//   });
+// });
+
+
+function handleDragEnd(event: DragEndEvent) {
+  console.log("DRAG END FIRED", event);
+  const { active, over } = event;
+  if (!over) return;
+
+  const taskId = Number(active.id);
+  const toStatus = over.id as TaskStatus;
+
+  // role restriction (UX layer)
+  if (role === "PROGRAMMER" && toStatus === "DONE") return;
+  
+
+  console.log({
+  taskId,
+  toStatus,
+  overId: over.id,
+  overData: over.data.current,
+});
+  router.patch(`/tasks/${taskId}`, {
+  status: toStatus,
+  position: 0,
+});
+
+}
+
+
+
 
  return (
   <div className="h-full flex flex-col gap-5">
@@ -44,10 +116,33 @@ function TaskBoard({
         </span>
       </h1>
     </div>
+    
+{canCreate && (
+  <button
+    onClick={() => setOpenCreate(true)}
+    className="rounded bg-black px-3 py-1 text-sm text-white"
+  >
+    + Add Task
+  </button>
+)}
+<CreateTaskModal
+  open={openCreate}
+  onClose={() => setOpenCreate(false)}
+  storyCode={story.code}
+/>
+
+
+
+<DndContext onDragEnd={handleDragEnd}>
+  {/* KANBAN GRID DI SINI */}
 
     {/* KANBAN */}
     <div className="grid grid-cols-4 gap-5 flex-1">
-      {STATUSES.map((s) => (
+      {STATUSES.map((s) => {
+
+
+
+        return (
         <div
           key={s.key}
           className="
@@ -69,60 +164,29 @@ function TaskBoard({
               {grouped[s.key].length}
             </span>
           </div>
+           <TaskColumn
+            status={s.key}
+            tasks={grouped[s.key]}
+            canDrag={["PROGRAMMER", "PM", "SAD"].includes(role)}
+          />
+        {/* <TaskDetailModal
+  task={selectedTask}
+  onClose={() => setSelectedTask(null)}
+/> */}
 
-          {/* CARD LIST */}
-          <div className="flex-1 space-y-2 overflow-y-auto">
-            {grouped[s.key].length === 0 && (
-              <div className="rounded-md border border-dashed border-gray-300 py-4 text-center text-xs text-gray-400">
-                No tasks
-              </div>
-            )}
-
-            {grouped[s.key].map((task) => (
-              <div
-                key={task.id}
-                className="
-                  group
-                  rounded-lg
-                  border
-                  border-gray-200
-                  bg-white
-                  p-3
-                  text-sm
-                  shadow-sm
-                  transition
-                  hover:shadow
-                  hover:border-gray-300
-                "
-              >
-                <div className="font-medium text-gray-900">
-                  {task.title}
-                </div>
-
-                <div className="mt-1 text-xs text-gray-400">
-                  #{task.id}
-                </div>
-              </div>
-            ))}
-          </div>
+          
         </div>
-      ))}
+        );
+})}
     </div>
+    </DndContext>
   </div>
 );
 
 }
 
-/**
- * 👇 INI KUNCINYA
- */
 TaskBoard.layout = (page: React.ReactNode) => (
   <AuthenticatedLayout
-    header={
-      <div className="text-sm text-gray-600">
-        {page}
-      </div>
-    }
   >
     {page}
   </AuthenticatedLayout>

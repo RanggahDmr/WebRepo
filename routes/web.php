@@ -5,6 +5,7 @@ use App\Http\Controllers\EpicPageController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\StoryController;
 
 
 
@@ -30,6 +31,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/epics/{epic}', [EpicPageController::class, 'show'])
         ->name('epics.show');
 
+        
+
  
     Route::middleware('role:PM')->group(function () {
 
@@ -44,6 +47,8 @@ Route::middleware('auth')->group(function () {
 
         Route::patch('/stories/{story}', [EpicPageController::class, 'updateStory'])
             ->name('stories.update');
+
+           
     });
 
    
@@ -57,5 +62,15 @@ Route::get(
 )->name('tasks.index');
 
 
+Route::post(
+    '/stories/{story}/tasks',
+    [TaskController::class, 'store']
+)->name('tasks.store');
+Route::patch(
+    '/tasks/{task}',
+    [TaskController::class, 'update']
+)->name('tasks.update');
+
 
 });
+

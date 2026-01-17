@@ -17,6 +17,10 @@ class Epic extends Model
     {
         return 'code';
     }
+       public function stories()
+    {
+        return $this->hasMany(Story::class);
+    }
   
 public static function generateCode(): string
 {

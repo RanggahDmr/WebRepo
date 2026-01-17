@@ -101,7 +101,7 @@ public function storeStory(Request $request, Epic $epic)
             'status' => ['required','in:TODO,IN_PROGRESS,DONE'],
         ]);
 
-        // ⛔ Cegah duplikat title di epic yang sama
+       
         $exists = Story::where('epic_id', $epic->id)
             ->where('title', $validated['title'])
             ->exists();
@@ -112,7 +112,7 @@ public function storeStory(Request $request, Epic $epic)
                 ->with('warning', 'Story already exists');
         }
 
-        // ✅ CREATE SEKALI
+      
         $story = Story::create([
               'code' => 'ST-' . strtoupper(Str::random(6)),
                 'epic_id' => $epic->id,
@@ -123,7 +123,7 @@ public function storeStory(Request $request, Epic $epic)
                 'created_by' => auth()->id(),
         ]);
 
-        // ✅ GENERATE CODE SEKALI
+      
         $story->update([
             'code' => 'ST-' . str_pad($story->id, 5, '0', STR_PAD_LEFT),
         ]);
