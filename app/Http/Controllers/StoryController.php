@@ -9,8 +9,7 @@ class StoryController extends Controller
 {
     public function show(Story $story)
     {
-        return Inertia::render('Stories/Show', [
-            'story' => $story,
-        ]);
+       return redirect()->route('epics.show', $story->epic_id);
+        
     }
 }

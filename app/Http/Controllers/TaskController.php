@@ -11,9 +11,12 @@ class TaskController extends Controller
 {
     public function index(Story $story)
     {
+        $story->load('epic');
+
         return Inertia::render('Tasks/TaskBoard', [
             'story' => $story,
-            'tasks' => $story->tasks()->get(),
+            'epic' => $story->epic,
+             'tasks' => $story->tasks()->orderBy('position')->get(),
         ]);
     }
 

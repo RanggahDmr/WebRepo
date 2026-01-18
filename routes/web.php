@@ -52,24 +52,24 @@ Route::middleware('auth')->group(function () {
     });
 
    
-Route::get('/stories/{story}', [StoryController::class, 'show'])
-  ->name('stories.show');
+        Route::get('/stories/{story}', [StoryController::class, 'show'])
+        ->name('stories.show');
 
 
-Route::get(
-    '/stories/{story}/tasks',
-    [TaskController::class, 'index']
-)->name('tasks.index');
+        Route::get(
+            '/stories/{story}/tasks',
+            [TaskController::class, 'index']
+        )->name('tasks.index');
 
 
-Route::post(
-    '/stories/{story}/tasks',
-    [TaskController::class, 'store']
-)->name('tasks.store');
-Route::patch(
-    '/tasks/{task}',
-    [TaskController::class, 'update']
-)->name('tasks.update');
+        Route::post(
+            '/stories/{story}/tasks',
+            [TaskController::class, 'store']
+        )->name('tasks.store');
+        Route::patch(
+            '/tasks/{task}',
+            [TaskController::class, 'update']
+        )->name('tasks.update');
 
 
 });

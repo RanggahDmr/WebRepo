@@ -7,7 +7,9 @@ import { DragEndEvent } from "@dnd-kit/core";
 import TaskColumn from "./TaskColumn";
 import { useState } from "react";
 import CreateTaskModal from "./CreateTaskModal";
-// import TaskDetailModal from "./TaskDetailModal";
+import TaskDetailModal from "./TaskDetailModal";
+import {Head} from "@inertiajs/react";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 
 type TaskType = "FE" | "BE" | "QA";
@@ -103,93 +105,105 @@ function handleDragEnd(event: DragEndEvent) {
 }
 
 
-
-
- return (
-  <div className="h-full flex flex-col gap-5">
-    {/* PAGE TITLE */}
-    <div className="flex items-center justify-between">
-      <h1 className="text-xl font-semibold text-black">
-        Tasks
-        <span className="ml-2 text-sm font-normal text-gray-500">
-          {story.code}
-        </span>
-      </h1>
-    </div>
-    
-{canCreate && (
-  <button
-    onClick={() => setOpenCreate(true)}
-    className="rounded bg-black px-3 py-1 text-sm text-white"
-  >
-    + Add Task
-  </button>
-)}
-<CreateTaskModal
-  open={openCreate}
-  onClose={() => setOpenCreate(false)}
-  storyCode={story.code}
-/>
-
-
-
-<DndContext onDragEnd={handleDragEnd}>
-  {/* KANBAN GRID DI SINI */}
-
-    {/* KANBAN */}
-    <div className="grid grid-cols-4 gap-5 flex-1">
-      {STATUSES.map((s) => {
-
-
-
-        return (
-        <div
-          key={s.key}
-          className="
-            flex flex-col
-            rounded-xl
-            bg-gray-50
-            border
-            border-gray-200
-            p-3
-          "
-        >
-          {/* COLUMN HEADER */}
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-xs font-semibold tracking-wide text-gray-600">
-              {s.label}
-            </h3>
-
-            <span className="text-xs text-gray-400">
-              {grouped[s.key].length}
+return (
+  <div className="space-y-4 h-full">
+    {/* CARD CONTAINER */}
+    <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100 h-full flex flex-col">
+      {/* CARD HEADER */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Tasks
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              {story.code}
             </span>
-          </div>
-           <TaskColumn
-            status={s.key}
-            tasks={grouped[s.key]}
-            canDrag={["PROGRAMMER", "PM", "SAD"].includes(role)}
-          />
-        {/* <TaskDetailModal
-  task={selectedTask}
-  onClose={() => setSelectedTask(null)}
-/> */}
-
-          
+          </h3>
         </div>
-        );
-})}
+
+        {canCreate && (
+          <button
+            onClick={() => setOpenCreate(true)}
+            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
+          >
+            + Add Task
+          </button>
+        )}
+      </div>
+
+      {/* KANBAN */}
+      <DndContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-4 gap-5 flex-1">
+          {STATUSES.map((s) => (
+            <div
+              key={s.key}
+              className="flex flex-col rounded-xl bg-gray-50 border border-gray-200 p-3"
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-xs font-semibold tracking-wide text-gray-600">
+                  {s.label}
+                </h3>
+                <span className="text-xs text-gray-400">
+                  {grouped[s.key].length}
+                </span>
+              </div>
+
+              <TaskColumn
+                status={s.key}
+                tasks={grouped[s.key]}
+                canDrag={["PROGRAMMER", "PM", "SAD"].includes(role)}
+                onOpenTask={(task: Task) => setSelectedTask(task)}
+              />
+            </div>
+          ))}
+        </div>
+      </DndContext>
     </div>
-    </DndContext>
+
+    {/* MODALS */}
+    <CreateTaskModal
+      open={openCreate}
+      onClose={() => setOpenCreate(false)}
+      storyCode={story.code}
+    />
+
+    <TaskDetailModal
+      task={selectedTask}
+      onClose={() => setSelectedTask(null)}
+    />
   </div>
 );
 
 }
 
-TaskBoard.layout = (page: React.ReactNode) => (
-  <AuthenticatedLayout
-  >
-    {page}
-  </AuthenticatedLayout>
-);
+TaskBoard.layout = (page: any) => {
+  const { epic, story } = page.props;
+
+  return (
+    <AuthenticatedLayout
+      header={
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
+
+          <Breadcrumbs
+            items={[
+           
+            { label: "Epics", href: route("dashboard") },
+            {
+              label: epic.code,
+              href: route("epics.show", epic.code),
+            },
+            { label: story.code },
+          ]}
+          />
+        </div>
+      }
+    >
+      <Head title={`Tasks - ${story.code}`} />
+      {page}
+    </AuthenticatedLayout>
+  );
+};
+
+
 
 export default TaskBoard;
