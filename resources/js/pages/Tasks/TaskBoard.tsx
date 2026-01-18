@@ -121,7 +121,7 @@ return (
           </h3>
           {story.description && (
             <p className="mt-1 text-sm text-gray-500">
-              {story.description}
+              desc: {story.description}
             </p>
           )}
         </div>
