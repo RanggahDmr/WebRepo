@@ -28,6 +28,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
             <th className="px-4 py-3 w-[15%]">Priority</th>
             <th className="px-4 py-3 w-[15%]">Status</th>
             <th className="px-4 py-3 w-[20%]">Created</th>
+            <th className="px-4 py-3 w-[20%]">Updated</th>
             <th className="px-4 py-3 w-[20%] text-right">Action</th>
           </tr>
         </thead>
@@ -99,6 +100,9 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
               <td className="px-4 py-3 text-gray-700">
                 {formatDateTime(e.created_at)}
               </td>
+              <td className="px-4 py-3 text-gray-700">
+                {formatDateTime(e.updated_at)}
+              </td>
 
               {/* ACTION */}
               <td className="px-4 py-3 text-right space-x-3">
@@ -109,11 +113,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
                   View
                 </Link>
 
-                {isPM && (
-                  <span className="text-sm text-gray-400">
-                    Inline Edit
-                  </span>
-                )}
+                
               </td>
             </tr>
           ))}

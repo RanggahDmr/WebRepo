@@ -8,6 +8,7 @@ class Epic extends Model
     protected $fillable = [
         'code',
         'create_work',
+        'description',
         'priority',
         'status',
         'created_by',
@@ -16,6 +17,10 @@ class Epic extends Model
     public function getRouteKeyName()
     {
         return 'code';
+    }
+       public function stories()
+    {
+        return $this->hasMany(Story::class);
     }
   
 public static function generateCode(): string

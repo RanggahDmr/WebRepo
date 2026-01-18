@@ -109,7 +109,7 @@ export default function Show({
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />
-{editing && ( 
+  {editing && ( 
       <StoryEditModal
         story={editing}
         onClose={() => setEditing(undefined)}

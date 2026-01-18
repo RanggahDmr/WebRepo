@@ -13,6 +13,7 @@ export default function EpicCreateModal({ open, onClose }: Props) {
   const { data, setData, post, processing, errors, reset } = useForm({
     code: "",
     create_work: "",
+    description:"",
     priority: "MEDIUM" as EpicPriority,
     status: "TODO" as EpicStatus,
   });
@@ -30,19 +31,19 @@ export default function EpicCreateModal({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="Create Epic">
       <form onSubmit={submit} className="space-y-4">
-        {/* <input
-          placeholder="Code (optional)"
-          className="w-full rounded-lg border px-3 py-2"
-          value={data.code}
-          onChange={(e) => setData("code", e.target.value)}
-        /> */}
         {errors.code && <p className="text-sm text-red-600">{errors.code}</p>}
-
+    
         <input
           placeholder="Create work"
           className="w-full rounded-lg border px-3 py-2"
           value={data.create_work}
           onChange={(e) => setData("create_work", e.target.value)}
+        />
+            <input
+          placeholder="Description"
+          className="w-full rounded-lg border px-3 py-2"
+          value={data.description}
+          onChange={(e) => setData("description", e.target.value)}
         />
         {errors.create_work && (
           <p className="text-sm text-red-600">{errors.create_work}</p>

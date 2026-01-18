@@ -1,0 +1,72 @@
+import { route } from "ziggy-js";
+import { router } from "@inertiajs/react";
+
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  storyCode: string;
+};
+
+export default function CreateTaskModal({ open, onClose, storyCode }: Props) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
+        <h2 className="mb-4 text-lg font-semibold">Create Task</h2>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const data = new FormData(form);
+
+            router.post(
+              route("tasks.store", { story: storyCode }),
+              Object.fromEntries(data),
+              { onSuccess: onClose }
+            );
+          }}
+          className="space-y-3"
+        >
+          <select name="type" className="w-full rounded border px-3 py-2 text-sm">
+            <option value="FE">FE</option>
+            <option value="BE">BE</option>
+            <option value="QA">QA</option>
+          </select>
+
+          <input
+            name="title"
+            placeholder="Task title"
+            className="w-full rounded border px-3 py-2 text-sm"
+            required
+          />
+
+          <textarea
+            name="description"
+            placeholder="Description"
+            className="w-full rounded border px-3 py-2 text-sm"
+            rows={4}
+          />
+
+          <div className="flex justify-end gap-2 pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded px-3 py-1 text-sm text-gray-600"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="rounded bg-black px-3 py-1 text-sm text-white"
+            >
+              Create
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

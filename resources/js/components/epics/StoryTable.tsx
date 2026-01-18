@@ -39,7 +39,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
               className="border-b last:border-0 hover:bg-gray-50 transition align-top"
             >
               {/* ID / CODE */}
-              <td className="px-4 py-3 font-mono text-xs text-gray-500">
+              <td className="px-4 py-3 font-medium text-red-600">
                 {s.code}
               </td>
 

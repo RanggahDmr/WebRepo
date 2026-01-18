@@ -32,9 +32,11 @@ class Story extends Model
 {
     return 'ST-' . strtoupper(Str::random(6));
 }
-public function tasks()
+    public function tasks()
 {
     return $this->hasMany(Task::class)->orderBy('position');
 }
+  
+
 
 }

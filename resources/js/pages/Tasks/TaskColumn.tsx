@@ -1,27 +1,33 @@
+import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import TaskCard from "./TaskCard";
 
-type Task = {
-  id: number;
-  title: string;
-  status: string;
-};
-
 export default function TaskColumn({
-  title,
+  status,
   tasks,
-}: {
-  title: string;
-  tasks: Task[];
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">{title}</h3>
+  canDrag,
+  onOpenTask,
+}: any) {
+  const { setNodeRef } = useDroppable({
+    id: status,
+    data: { status },
+  });
 
-      <div className="flex flex-col gap-2">
-        {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+  return (
+    <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[80px]">
+      <SortableContext
+        items={tasks.map((t: any) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        {tasks.map((task: any) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            canDrag={canDrag}
+            onOpen={onOpenTask} // 🔑 sambungan ke modal
+          />
         ))}
-      </div>
+      </SortableContext>
     </div>
   );
 }
