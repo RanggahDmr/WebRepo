@@ -30,6 +30,11 @@ export default function EpicSummary({ epic }: { epic: Epic }) {
               Updated: {formatDateTime(epic.updated_at)}
             </div>
           )}
+
+          <p className="mt-1 text-sm text-gray-500">
+            Description :{epic.description}
+            </p>
+
         </div>
       </div>
     </div>

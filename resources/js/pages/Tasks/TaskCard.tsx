@@ -53,8 +53,8 @@ export default function TaskCard({ task, canDrag, onOpen }: Props) {
       {/* CLICKABLE CONTENT */}
       <div
         onClick={(e) => {
-          e.stopPropagation(); // 🔑 ini yang bikin aman
-          onOpen?.(task);      // 🔑 buka detail popup
+          e.stopPropagation(); 
+          onOpen?.(task);      
         }}
         className="cursor-pointer"
       >

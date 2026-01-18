@@ -27,6 +27,7 @@ type Task = {
 type Story = {
   id: number;
   code: string;
+  description : string | null;
 };
 
 const STATUSES = [
@@ -118,6 +119,11 @@ return (
               {story.code}
             </span>
           </h3>
+          {story.description && (
+            <p className="mt-1 text-sm text-gray-500">
+              {story.description}
+            </p>
+          )}
         </div>
 
         {canCreate && (

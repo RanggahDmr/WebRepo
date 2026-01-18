@@ -11,6 +11,7 @@ export default function Badge({
     HIGH: "bg-red-500 text-white",
     TODO: "bg-gray-300 text-gray-700",
     IN_PROGRESS: "bg-green-300 text-gray-800",
+    IN_REVIEW: "bg-green-300 text-gray-800",
     DONE: "bg-black text-white",
   };
 

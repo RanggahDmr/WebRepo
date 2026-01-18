@@ -8,6 +8,7 @@ class Epic extends Model
     protected $fillable = [
         'code',
         'create_work',
+        'description',
         'priority',
         'status',
         'created_by',

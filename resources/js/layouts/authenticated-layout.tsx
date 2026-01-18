@@ -11,7 +11,8 @@ export default function AuthenticatedLayout({
   const epicActive =
   route().current("dashboard") ||
   route().current("epics.show") ||
-  route().current("stories.show");
+  route().current("stories.show")||
+  route().current("tasks.index");
 
 
   return (
@@ -44,7 +45,8 @@ export default function AuthenticatedLayout({
                         const epicActive =
                         route().current("dashboard") ||
                         route().current("epics.show") ||
-                        route().current("stories.show");
+                        route().current("stories.show")||
+                        route().current("tasks.index");
 
                         return (
                         <Link

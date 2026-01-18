@@ -15,7 +15,7 @@ class EpicPageController extends Controller
     {
         $epics = Epic::query()
             ->latest('updated_at')
-            ->get(['id','code','create_work','priority','status','created_by','created_at','updated_at']);
+            ->get(['id','code','create_work','priority','description', 'status','created_by','created_at','updated_at']);
 
         return Inertia::render('Dashboard/Index', [
             'epics' => $epics,
@@ -30,7 +30,7 @@ class EpicPageController extends Controller
             ->get(['id','epic_id','code','title','description','priority','status','created_by','created_at','updated_at']);
 
         return Inertia::render('Epics/Show', [
-            'epic' => $epic->only(['id','code','create_work','priority','status','created_by','created_at','updated_at']),
+            'epic' => $epic->only(['id','code','create_work', 'description','priority','status','created_by','created_at','updated_at']),
             'stories' => $stories,
         ]);
     }
@@ -40,6 +40,7 @@ class EpicPageController extends Controller
     {
         $validated = $request->validate([
             'code' => ['nullable','string','max:30','unique:epics,code'],
+            'description' => ['nullable', 'string'],
             'create_work' => ['required','string','max:255'],
             'priority' => ['required','in:LOW,MEDIUM,HIGH'],
             'status' => ['required','in:TODO,IN_PROGRESS,DONE'],
@@ -47,18 +48,13 @@ class EpicPageController extends Controller
         
         $epic = Epic::create([
         'code' => 'EP-' . strtoupper(Str::random(6)),
+        'description' => $validated['description'] ?? null,
         'create_work' => $validated['create_work'],
         'priority' => $validated['priority'],
         'status' => $validated['status'],
         'created_by' => auth()->id(),
     ]);
-        Epic::create([
-    'code' => 'EP-' . strtoupper(Str::random(6)),
-    'create_work' => $validated['create_work'],
-    'priority' => $validated['priority'],
-    'status' => $validated['status'],
-    'created_by' => auth()->id(),
-]);
+
          $epic->update([
         'code' => 'EP-' . str_pad($epic->id, 5, '0', STR_PAD_LEFT),
         
