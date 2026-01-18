@@ -5,6 +5,8 @@ type Props = {
   onClose: () => void;
 };
 
+//Task detail
+
 export default function TaskDetailModal({ task, onClose }: Props) {
   if (!task) return null;
 
