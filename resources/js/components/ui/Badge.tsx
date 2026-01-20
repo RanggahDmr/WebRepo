@@ -7,9 +7,9 @@ export default function Badge({
 }) {
   const styles: Record<string, string> = {
     LOW: "bg-green-300 text-gray-700",
-    MEDIUM: "bg-gray-200 text-gray-800",
+    MEDIUM: "bg-orange-400 text-gray-800",
     HIGH: "bg-red-500 text-white",
-    TODO: "bg-gray-300 text-gray-700",
+    TODO: "bg-red-500 text-white",
     IN_PROGRESS: "bg-green-300 text-gray-800",
     IN_REVIEW: "bg-green-300 text-gray-800",
     DONE: "bg-black text-white",
@@ -24,4 +24,6 @@ export default function Badge({
       {children}
     </span>
   );
+
+  
 }

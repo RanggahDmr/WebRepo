@@ -24,7 +24,7 @@ export default function TaskColumn({
             key={task.id}
             task={task}
             canDrag={canDrag}
-            onOpen={onOpenTask} // 🔑 sambungan ke modal
+            onOpen={onOpenTask} 
           />
         ))}
       </SortableContext>

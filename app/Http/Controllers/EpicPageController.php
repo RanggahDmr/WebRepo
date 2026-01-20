@@ -7,32 +7,67 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
+
 
 
 class EpicPageController extends Controller
 {
     public function index()
     {
-        $epics = Epic::query()
-            ->latest('updated_at')
-            ->get(['id','code','create_work','priority','description', 'status','created_by','created_at','updated_at']);
 
-        return Inertia::render('Dashboard/Index', [
-            'epics' => $epics,
+       $epics = Epic::with('creator')
+        ->latest('updated_at')
+        ->get([
+            'id',
+            'code',
+            'create_work',
+            'priority',
+            'description',
+            'status',
+            'created_by',
+            'created_at',
+            'updated_at',
         ]);
+
+    return Inertia::render('Dashboard/Index', [
+        'epics' => $epics,
+    ]);
     }
 
     public function show(Epic $epic)
     {
-        $stories = Story::query()
-            ->where('epic_id', $epic->id)
-            ->latest('updated_at')
-            ->get(['id','epic_id','code','title','description','priority','status','created_by','created_at','updated_at']);
-
-        return Inertia::render('Epics/Show', [
-            'epic' => $epic->only(['id','code','create_work', 'description','priority','status','created_by','created_at','updated_at']),
-            'stories' => $stories,
+       $stories = Story::with('creator') 
+        ->where('epic_id', $epic->id)
+        ->latest('updated_at')
+        ->get([
+            'id',
+            'epic_id',
+            'code',
+            'title',
+            'description',
+            'priority',
+            'status',
+            'created_by',
+            'created_at',
+            'updated_at',
         ]);
+
+    return Inertia::render('Epics/Show', [
+        'epic' => $epic->load('creator')->only([
+            'id',
+            'code',
+            'create_work',
+            'description',
+            'priority',
+            'status',
+            'created_by',
+            'created_at',
+            'updated_at',
+            'creator',
+        ]),
+        'stories' => $stories,
+    ]);
     }
 
     // PM only (route middleware role:PM)
@@ -86,7 +121,10 @@ class EpicPageController extends Controller
 
 public function storeStory(Request $request, Epic $epic)
 {
-    abort_unless($request->user()->role === 'PM', 403);
+    abort_unless(
+    in_array($request->user()->role, ['PM', 'SAD']),
+    403
+    );
 
     return DB::transaction(function () use ($request, $epic) {
 

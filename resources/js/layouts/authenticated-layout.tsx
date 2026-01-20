@@ -46,7 +46,8 @@ export default function AuthenticatedLayout({
                         route().current("dashboard") ||
                         route().current("epics.show") ||
                         route().current("stories.show")||
-                        route().current("tasks.index");
+                        route().current("tasks.index")||
+                        route().current("monitoring.index");
 
                         return (
                         <Link
@@ -59,13 +60,29 @@ export default function AuthenticatedLayout({
                         );
                     })()}
 
-                    <div className="rounded-md px-3 py-2 text-sm text-gray-400">
-                        History (later)
-                    </div>
+                   <Link
+                    href={route("history.index")}
+                    className={`rounded-md px-3 py-2 text-sm font-medium transition
+                      ${route().current("history.index")
+                        ? "bg-black text-white"
+                        : "text-gray-700 hover:bg-gray-100"}
+                    `}
+                  >
+                    History
+                  </Link>
 
-                    <div className="rounded-md px-3 py-2 text-sm text-gray-400">
-                        Task (later)
-                    </div>
+
+                   <Link
+                    href={route("monitoring.index")}
+                    className={`rounded-md px-3 py-2 text-sm transition 
+                      ${route().current("monitoring.index")
+                        ? "bg-black text-white"
+                        : "text-gray-700 hover:bg-gray-100"}
+                    }`}
+                  >
+                    Monitoring
+                  </Link>
+
                     </nav>
 
                 {/* LOGOUT */}

@@ -1,6 +1,6 @@
-import { route } from "ziggy-js";
+// import { route } from "ziggy-js";
 import { router } from "@inertiajs/react";
-
+import route from "@/lib/route";
 
 type Props = {
   open: boolean;
@@ -30,11 +30,16 @@ export default function CreateTaskModal({ open, onClose, storyCode }: Props) {
           }}
           className="space-y-3"
         >
-          <select name="type" className="w-full rounded border px-3 py-2 text-sm">
-            <option value="FE">FE</option>
-            <option value="BE">BE</option>
-            <option value="QA">QA</option>
-          </select>
+          <select
+              name="priority"
+              className="w-full rounded border px-3 py-2 text-sm"
+              defaultValue="MEDIUM"
+            >
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+            </select>
+
 
           <input
             name="title"
