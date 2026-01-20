@@ -19,7 +19,7 @@ export default function Show({
   epic: Epic;
   stories: Story[];
 }) {
-  const { isPM } = useRole();
+  const { canCreateStory } = useRole();
 
   // filters
   const [q, setQ] = useState("");
@@ -69,10 +69,11 @@ export default function Show({
         <EpicSummary epic={epic} />
 
         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+          
           <div className="mb-6 flex items-center justify-between">
             <h3 className="text-lg font-semibold"></h3>
-
-            {isPM && (
+            
+            {canCreateStory && (
               <button
                 className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
                 onClick={() => setCreateOpen(true)}
@@ -80,6 +81,7 @@ export default function Show({
                 + Create Story
               </button>
             )}
+            
           </div>
 
           <StoryFilters

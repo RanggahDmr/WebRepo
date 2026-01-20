@@ -5,10 +5,14 @@ import { Epic } from "@/types/epic";
 import EpicInlineSelect from "./EpicInlineSelect";
 import EpicInlineTitle from "./EpicInlineTitle";
 import Badge from "@/components/ui/Badge";
+import { useState } from "react";
+import EpicDetailModal from "./EpicDetailModal";
 
 export default function EpicTable({ epics }: { epics: Epic[] }) {
   const { auth }: any = usePage().props;
   const isPM = auth?.user?.role === "PM";
+  const [open, setOpen] = useState(false);
+  const [SelectedEpic, setSelectedEpic] = useState<any>(null);
 
   if (!epics.length) {
     return (
@@ -29,6 +33,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
             <th className="px-4 py-3 w-[15%]">Status</th>
             <th className="px-4 py-3 w-[20%]">Created</th>
             <th className="px-4 py-3 w-[20%]">Updated</th>
+            <th className="px-4 py-3 w-[20%]">Created By</th>
             <th className="px-4 py-3 w-[20%] text-right">Action</th>
           </tr>
         </thead>
@@ -41,12 +46,17 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
               key={e.id}
               className="border-b last:border-0 hover:bg-gray-50 transition"
             ><td className="px-4 py-3 font-medium text-blue-600">
-              <Link
-                href={route("epics.show", { epic: e.code })}
-                className="hover:underline"
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedEpic(e);
+                  setOpen(true);
+                }}
+                className="px-4 py-3 font-medium text-blue-600 hover:underline"
               >
                 {e.code}
-              </Link>
+              </button>
+
             </td>
             
               <td className="px-4 py-3 font-medium text-gray-900">
@@ -103,15 +113,26 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
               <td className="px-4 py-3 text-gray-700">
                 {formatDateTime(e.updated_at)}
               </td>
+              <td className="px-4 py-3 text-gray-700">
+                 {e.creator?.name ?? "-"}
+              </td>
 
               {/* ACTION */}
               <td className="px-4 py-3 text-right space-x-3">
-                <Link
-                  href={route("epics.show",{epic: e.code })}
-                  className="font-medium text-black hover:underline"
-                >
-                  View
-                </Link>
+                <div className="inline-flex items-center gap-2">
+                <button
+                type="button"
+                onClick={() =>
+                  (window.location.href = route("epics.show", { epic: e.code }))
+                }
+                className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium
+                          text-white bg-black hover:bg-gray-800 transition"
+              >
+                View
+              </button>
+              </div>
+
+  
 
                 
               </td>
@@ -119,6 +140,14 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
           ))}
         </tbody>
       </table>
+      <EpicDetailModal
+        open={open}
+        epic={SelectedEpic}
+        onClose={() => {
+          setOpen(false);
+          setSelectedEpic(null)
+        }}
+      />
     </div>
   );
 }

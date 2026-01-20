@@ -34,7 +34,7 @@ export default function Dashboard({ epics }: { epics: Epic[] }) {
 
       <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
         <div className="mb-6 flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Epics</h3>
+          <h3 className="text-lg font-semibold"></h3>
 
           {isPM && (
             <button

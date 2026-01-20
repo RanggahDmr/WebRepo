@@ -37,4 +37,21 @@ class StoryObserver
        
         $epic->update(['status' => 'TODO']);
     }
+
+     public function created(Story $story): void
+    {
+        log_activity($story, 'created', [
+            'after' => $story->only(['title', 'status']),
+        ]);
+    }
+
+    public function updated(Story $story): void
+    {
+        if ($story->wasChanged('status')) {
+            log_activity($story, 'status_changed', [
+                'from' => $story->getOriginal('status'),
+                'to' => $story->status,
+            ]);
+        }
+    }
 }

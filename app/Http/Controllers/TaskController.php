@@ -9,16 +9,23 @@ use Inertia\Inertia;
 
 class TaskController extends Controller
 {
-    public function index(Story $story)
-    {
-        $story->load('epic');
+  public function index(Story $story)
+{
+    $story->load(['epic', 'creator']);
 
-        return Inertia::render('Tasks/TaskBoard', [
-            'story' => $story,
-            'epic' => $story->epic,
-             'tasks' => $story->tasks()->orderBy('position')->get(),
-        ]);
-    }
+    $tasks = $story->tasks()
+        ->with('creator')
+        ->orderBy('position')
+        ->get();
+
+    return Inertia::render('Tasks/TaskBoard', [
+        'story' => $story,
+        'epic' => $story->epic,
+        'tasks' => $tasks,
+    ]);
+}
+
+
 
  public function update(Request $request, Task $task)
     {
@@ -54,7 +61,7 @@ class TaskController extends Controller
     }
 
     $validated = $request->validate([
-        'type' => 'required|in:FE,BE,QA',
+        'priority' => 'required|in:LOW,MEDIUM,HIGH',
         'title' => 'required|string|max:255',
         'description' => 'nullable|string',
     ]);
@@ -64,12 +71,13 @@ class TaskController extends Controller
         ->max('position');
 
     $task = $story->tasks()->create([
-        'type' => $validated['type'],
+        'priority' => $validated['priority'],
         'title' => $validated['title'],
         'description' => $validated['description'] ?? null,
         'status' => 'TODO',
         'position' => ($position ?? -1) + 1,
         'assignee_id' => null,
+        'created_by' => $user->id, 
     ]);
 
     return back();

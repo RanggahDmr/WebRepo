@@ -5,10 +5,18 @@ import { Story } from "@/types/story";
 import StoryInlineSelect from "./StoryInlineSelect";
 import StoryInlineTitle from "./StoryInlineTitle";
 import Badge from "@/components/ui/Badge";
+import { useRole } from "@/lib/useRole";
+import { useState } from "react";
+import StoryDetailModal from "./StoryDetailModal";
+
+
 
 export default function StoryTable({ stories }: { stories: Story[] }) {
   const { auth }: any = usePage().props;
-  const isPM = auth?.user?.role === "PM";
+  const { canCreateStory } = useRole();
+  const [open, setOpen] = useState(false)
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+
 
   if (!stories.length) {
     return (
@@ -28,6 +36,9 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
             <th className="px-4 py-3 w-[15%]">Priority</th>
             <th className="px-4 py-3 w-[15%]">Status</th>
             <th className="px-4 py-3 w-[15%]">Updated</th>
+            <th className="px-4 py-3 w-[15%]">Created</th>
+            <th className="px-4 py-3 w-[15%]">CreatedBy</th>
+            
             <th className="px-4 py-3 w-[10%] text-right">Action</th>
           </tr>
         </thead>
@@ -39,13 +50,23 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
               className="border-b last:border-0 hover:bg-gray-50 transition align-top"
             >
               {/* ID / CODE */}
-              <td className="px-4 py-3 font-medium text-red-600">
+              <td className="px-4 py-3 font-medium text-blue-600">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStory(s);
+                  setOpen(true);
+                }}
+                className="hover:underline"
+              >
                 {s.code}
-              </td>
+              </button>
+            </td>
+
 
               {/* TITLE */}
               <td className="px-4 py-3 font-medium text-gray-900">
-                {isPM ? (
+                {canCreateStory ? (
                   <StoryInlineTitle
                     storyCode={s.code}
                     value={s.title}
@@ -54,7 +75,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
                   s.title
                 )}
 
-                {s.description ? (
+                {/* {s.description ? (
                   <div className="mt-1 text-xs text-gray-500 line-clamp-1">
                     {s.description}
                   </div>
@@ -62,12 +83,12 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
                   <div className="mt-1 text-xs text-gray-400">
                     No description
                   </div>
-                )}
+                )} */}
               </td>
 
               {/* PRIORITY */}
               <td className="px-4 py-3">
-                {isPM ? (
+                {canCreateStory ? (
                   <StoryInlineSelect
                     storyCode={s.code}
                     field="priority"
@@ -85,7 +106,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
 
               {/* STATUS */}
               <td className="px-4 py-3">
-                {isPM ? (
+                {canCreateStory ? (
                   <StoryInlineSelect
                     storyCode={s.code}
                     field="status"
@@ -107,20 +128,45 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
                 {s.updated_at ? formatDateTime(s.updated_at) : "-"}
               </td>
 
+             {/* CREATED */}
+              <td className="px-4 py-3 text-gray-700">
+                {formatDateTime(s.created_at)}
+              </td>
+
+              {/* CREATED BY */}
+              <td className="px-4 py-3 text-gray-700">
+                {s.creator?.name ?? "-"}
+              </td>
+
               {/* ACTION */}
               <td className="px-4 py-3 text-right">
-                <Link
-                  href={route("tasks.index", { story: s.code })}
-                  className="font-medium text-black hover:underline"
-                >
-                  View
-                </Link>
-                
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      window.location.href = route("tasks.index", { story: s.code })
+                    }
+                    className="rounded-md border px-3 py-1.5 text-sm font-medium text-white bg-black hover:bg-gray-800 " 
+                  >
+                    View
+                  </button>
+
+                  {/* delete nanti di sini */}
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <StoryDetailModal
+        open={open}
+        story={selectedStory}
+        onClose={() => {
+          setOpen(false);
+          setSelectedStory(null);
+        }}
+      />
+
     </div>
   );
 }

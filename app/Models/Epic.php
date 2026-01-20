@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+use App\Models\Story;
+
 class Epic extends Model
 {
     protected $fillable = [
@@ -13,6 +16,12 @@ class Epic extends Model
         'status',
         'created_by',
     ];
+
+    
+ public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     public function getRouteKeyName()
     {
@@ -29,3 +38,4 @@ public static function generateCode(): string
 }
 
 }
+

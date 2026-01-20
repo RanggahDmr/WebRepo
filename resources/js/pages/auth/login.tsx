@@ -117,7 +117,7 @@ export default function Login() {
 
               {/* Register */}
               <p className="text-center text-sm text-gray-600">
-                Belum punya akun?{" "}
+                don't have account?{" "}
                 <Link
                   href={route("register")}
                   className="font-medium text-black underline"
