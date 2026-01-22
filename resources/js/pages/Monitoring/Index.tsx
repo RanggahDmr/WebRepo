@@ -7,6 +7,8 @@ import ProgressBar from "@/components/Monitoring/ProgressBar";
 import { DndContext } from "@dnd-kit/core";
 import { useTaskDnD } from "@/hooks/useTaskDnD";
 import TaskColumn from "../Tasks/TaskColumn";
+import { useState } from "react";
+import TaskDetailCard from "@/components/Monitoring/TaskDetailCard";
 
 const STATUSES = [
   { key: "TODO", label: "TODO" },
@@ -18,6 +20,8 @@ const STATUSES = [
 export default function MonitoringIndex() {
   const { tasks, filters, roles, auth, progress }: any = usePage().props;
 
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { handleDragEnd } = useTaskDnD(auth.user.role);
 
   const grouped = STATUSES.reduce(
@@ -35,31 +39,30 @@ export default function MonitoringIndex() {
       { preserveState: true, replace: true }
     );
   }
-
- function applySort(field: string) {
-  const direction =
-    filters.sort === field && filters.direction === "asc"
-      ? "desc"
-      : "asc";
-
-  router.get(
-    route("monitoring.index"),
-    {
-      ...filters,
-      sort: field,
-      direction,
-    },
-    { preserveState: true, replace: true }
-  );
-}
+  const openTask = (task: any) => {
+  setSelectedTask(task);
+  setSidebarOpen(true);
+};
 
 
   return (
     <AuthenticatedLayout
-      header={<h1 className="text-xl font-semibold">Monitoring Tasks</h1>}
-      
-    >
-         <ProgressBar progress={progress} />
+     header={<h1 className="text-xl font-semibold">Monitoring Tasks</h1>}
+     rightSidebarOpen={sidebarOpen}
+      rightSidebar={
+        sidebarOpen ? (
+          <TaskDetailCard
+            task={selectedTask}
+            onClose={() => {
+              setSidebarOpen(false);
+              setSelectedTask(null);
+            }}
+          />
+        ) : null
+      }
+>
+      <ProgressBar progress={progress} />
+
       {/* FILTER */}
       <div className="bg-white p-4 rounded-lg shadow mb-4 flex gap-4 flex-wrap">
         <select
@@ -69,21 +72,11 @@ export default function MonitoringIndex() {
         >
           <option value="">All Roles</option>
           {roles.map((r: string) => (
-            <option key={r} value={r}>{r}</option>
+            <option key={r} value={r}>
+              {r}
+            </option>
           ))}
         </select>
-        {/* SORT BY DATE */}
-        {/* <select
-        value={filters.sort || "created_at"}
-        onChange={(e) => applySort(e.target.value)}
-        className="border rounded px-2 py-1"
-        >
-        <option value="created_at">Sort by Created Date</option> 
-        <option value="updated_at">Sort by Updated Date</option> 
-        </select> */}
-
-      
-
 
         <select
           value={filters.status || ""}
@@ -108,41 +101,29 @@ export default function MonitoringIndex() {
           <option value="HIGH">High</option>
         </select>
 
-        {/* <input
-          type="date"
-          value={filters.date_from || ""}
-          onChange={(e) => applyFilter("date_from", e.target.value)}
-          className="border rounded px-2 py-1"
-        />
-
-        <input
-          type="date"
-          value={filters.date_to || ""}
-          onChange={(e) => applyFilter("date_to", e.target.value)}
-          className="border rounded px-2 py-1"
-        /> */}
-
-          <select
-        value={filters.direction || "desc"}
-        onChange={(e) =>
+        <select
+          value={filters.direction || "desc"}
+          onChange={(e) =>
             router.get(
-            route("monitoring.index"),
-            {
-                ...filters,
-                direction: e.target.value,
-            },
-            { preserveState: true, replace: true }
+              route("monitoring.index"),
+              { ...filters, direction: e.target.value },
+              { preserveState: true, replace: true }
             )
-        }
-        className="border rounded px-2 py-1"
+          }
+          className="border rounded px-2 py-1"
         >
-        <option value="desc">Newest First</option>
-        <option value="asc">Oldest First</option>
+          <option value="desc">Newest First</option>
+          <option value="asc">Oldest First</option>
         </select>
       </div>
 
       {/* TABLE */}
-      <MonitoringTable tasks={tasks.data} />
+      <MonitoringTable
+        tasks={tasks.data}
+        selectedTaskId={selectedTask?.id ?? null}
+        onSelectTask={openTask}
+      />
+
       <Pagination links={tasks.links} />
 
       {/* KANBAN (DnD) */}
@@ -167,7 +148,7 @@ export default function MonitoringIndex() {
                   status={s.key}
                   tasks={grouped[s.key]}
                   canDrag={["PROGRAMMER", "PM", "SAD"].includes(auth.user.role)}
-                  onOpenTask={() => {}}
+                  onOpenTask={openTask}
                 />
               </div>
             ))}

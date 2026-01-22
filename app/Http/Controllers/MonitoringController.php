@@ -14,27 +14,33 @@ class MonitoringController extends Controller
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
 
+        // (Optional) whitelist sorting biar aman
+        $allowedSorts = ['created_at', 'updated_at', 'priority', 'status', 'id'];
+        if (!in_array($sort, $allowedSorts, true)) {
+            $sort = 'created_at';
+        }
+        $direction = $direction === 'asc' ? 'asc' : 'desc';
+
         /*
         |--------------------------------------------------------------------------
         | FILTERED TASKS (TABLE + KANBAN)
         |--------------------------------------------------------------------------
         */
         $tasks = Task::query()
-            ->with(['creator', 'assignee'])
+            ->with([
+                
+                'creator:id,name',
+                'assignee:id,name,role',
+                'story:id,epic_id,code,title',
+                'story.epic:id,code,create_work',
+            ])
 
             ->when($request->role, function ($q, $role) {
-                $q->whereHas('assignee', fn ($q) =>
-                    $q->where('role', $role)
-                );
+                $q->whereHas('assignee', fn ($q) => $q->where('role', $role));
             })
 
-            ->when($request->status, fn ($q, $status) =>
-                $q->where('status', $status)
-            )
-
-            ->when($request->priority, fn ($q, $priority) =>
-                $q->where('priority', $priority)
-            )
+            ->when($request->status, fn ($q, $status) => $q->where('status', $status))
+            ->when($request->priority, fn ($q, $priority) => $q->where('priority', $priority))
 
             ->orderBy($sort, $direction)
             ->paginate(5)
@@ -42,7 +48,7 @@ class MonitoringController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | GLOBAL PROGRESS (NO FILTER AT ALL ❗)
+        | GLOBAL PROGRESS (NO FILTER)
         |--------------------------------------------------------------------------
         */
         $progress = Task::selectRaw("
@@ -56,7 +62,7 @@ class MonitoringController extends Controller
 
         return Inertia::render('Monitoring/Index', [
             'tasks' => $tasks,
-            'progress' => $progress, // ✅ GLOBAL PROGRESS
+            'progress' => $progress,
             'filters' => $request->only([
                 'role',
                 'status',

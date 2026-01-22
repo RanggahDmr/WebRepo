@@ -59,7 +59,7 @@ export default function TaskCard({ task, canDrag, onOpen }: Props) {
         className="cursor-pointer"
       >
         <div className="font-medium">
-          [{task.type}] {task.title}
+           {task.title}
         </div>
       </div>
     </div>

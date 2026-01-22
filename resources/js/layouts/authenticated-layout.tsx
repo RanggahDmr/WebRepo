@@ -6,7 +6,10 @@ import FlashMessage from "@/components/ui/FlashMessage";
 export default function AuthenticatedLayout({
   header,
   children,
-}: PropsWithChildren<{ header?: ReactNode }>) {
+  rightSidebar,
+  rightSidebarOpen = false,
+}: PropsWithChildren<{ header?: ReactNode; rightSidebar?: ReactNode; rightSidebarOpen?: boolean }>) {
+
   const { auth }: any = usePage().props;
 
   // ===== ACTIVE STATE =====
@@ -17,7 +20,6 @@ export default function AuthenticatedLayout({
     route().current("tasks.index");
 
   const historyActive = route().current("history.index");
-
   const monitoringActive = route().current("monitoring.index");
 
   return (
@@ -26,7 +28,7 @@ export default function AuthenticatedLayout({
 
       {/* TOPBAR */}
       <div className="border-b bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+        <div className="w-full px-6 py-3 flex items-center justify-between">
           <div className="font-semibold text-black">WebRepo</div>
 
           <div className="text-sm text-gray-600">
@@ -37,12 +39,12 @@ export default function AuthenticatedLayout({
 
       {/* BODY */}
       <div className="flex-1 min-h-0">
-        <div className="mx-auto max-w-7xl px-4 py-6 h-full">
+        {/* Full width container */}
+        <div className="w-full px-6 py-6 h-full">
           <div className="flex gap-6 h-full min-h-0">
-            {/* SIDEBAR */}
+            {/* LEFT SIDEBAR */}
             <aside className="w-64 shrink-0 h-full">
               <div className="h-full flex flex-col justify-between rounded-lg bg-white p-4 shadow-sm">
-                
                 {/* NAV */}
                 <nav className="flex flex-col gap-1 overflow-y-auto">
                   {/* PROJECT */}
@@ -100,16 +102,98 @@ export default function AuthenticatedLayout({
               </div>
             </aside>
 
-            {/* CONTENT */}
+            {/* MAIN CONTENT */}
             <main className="min-w-0 flex-1 h-full min-h-0 overflow-y-auto">
               <div className="pb-6">
                 {header && <div className="mb-4">{header}</div>}
                 {children}
               </div>
             </main>
+
+            {/* RIGHT SIDEBAR */}
+               <div
+            className={[
+              "hidden xl:block shrink-0 h-full transition-all duration-300 ease-in-out",
+              rightSidebarOpen ? "w-[360px]" : "w-0",
+            ].join(" ")}
+          >
+            {/* Inner wrapper supaya konten ikut slide + fade */}
+            <div
+              className={[
+                "h-full overflow-y-auto transition-all duration-300 ease-in-out",
+                rightSidebarOpen
+                  ? "opacity-100 translate-x-0"
+                  : "opacity-0 translate-x-4 pointer-events-none",
+              ].join(" ")}
+            >
+              <div className="sticky top-0">
+                {/* render content only when provided */}
+                {rightSidebar}
+              </div>
+            </div>
+          </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+
+
+
+
+  //  <aside className="hidden xl:block w-[360px] shrink-0 h-full">
+  //             <div className="h-full overflow-y-auto">
+  //               <div className="sticky top-0">
+  //                 {/* Default card / slot */}
+  //                 {rightSidebar ? (
+  //                   rightSidebar
+  //                 ) : (
+  //                   <div className="rounded-lg bg-white p-4 shadow-sm border">
+  //                     <div className="text-sm font-semibold text-gray-900">
+  //                       Task Detail
+  //                     </div>
+  //                     <div className="mt-2 text-xs text-gray-500">
+  //                       Click task on board/table for details at here.
+  //                     </div>
+
+  //                     <div className="mt-4 space-y-3">
+  //                       <div className="rounded-md bg-gray-50 p-3">
+  //                         <div className="text-xs text-gray-500">Title</div>
+  //                         <div className="text-sm text-gray-900 font-medium">
+  //                           -
+  //                         </div>
+  //                       </div>
+
+  //                       <div className="rounded-md bg-gray-50 p-3">
+  //                         <div className="text-xs text-gray-500">Status</div>
+  //                         <div className="text-sm text-gray-900 font-medium">
+  //                           -
+  //                         </div>
+  //                       </div>
+
+  //                       <div className="rounded-md bg-gray-50 p-3">
+  //                         <div className="text-xs text-gray-500">
+  //                           Description
+  //                         </div>
+  //                         <div className="text-sm text-gray-700">-</div>
+  //                       </div>
+  //                       <div className="rounded-md bg-gray-50 p-3">
+  //                         <div className="text-xs text-gray-500">
+  //                           Created At
+  //                         </div>
+  //                         <div className="text-sm text-gray-700">-</div>
+  //                       </div>
+  //                       <div className="rounded-md bg-gray-50 p-3">
+  //                         <div className="text-xs text-gray-500">
+  //                           Created By
+  //                         </div>
+  //                         <div className="text-sm text-gray-700">-</div>
+  //                       </div>
+  //                     </div>
+  //                   </div>
+  //                 )}
+  //               </div>
+  //             </div>
+  //           </aside>
