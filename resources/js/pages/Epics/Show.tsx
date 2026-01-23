@@ -55,7 +55,7 @@ export default function Show({
           <h2 className="text-2xl font-bold text-gray-900">Stories</h2>
           <Breadcrumbs
             items={[
-              { label: "Home", href: route("dashboard") },
+              { label: "Board", href: route("dashboard") },
               { label: "Epics", href: route("dashboard") },
               { label: epic.code },
             ]}

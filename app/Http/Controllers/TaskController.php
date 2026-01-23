@@ -6,19 +6,21 @@ use App\Models\Story;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
 {
   public function index(Story $story)
 {
-    $story->load(['epic', 'creator']);
-
+      $story->load(['epic.board', 'creator']);
+    
     $tasks = $story->tasks()
         ->with('creator')
         ->orderBy('position')
         ->get();
 
     return Inertia::render('Tasks/TaskBoard', [
+        'board' => $story->epic->board?->only(['id','squad','title']),
         'story' => $story,
         'epic' => $story->epic,
         'tasks' => $tasks,
@@ -56,7 +58,7 @@ class TaskController extends Controller
 {
     $user = $request->user();
 
-    if (!in_array($user->role, ['PM', 'SAD', PROGRAMMER])) {
+    if (!in_array($user->role, ['PM', 'SAD', 'PROGRAMMER'])) {
         abort(403);
     }
 
@@ -64,7 +66,12 @@ class TaskController extends Controller
         'priority' => 'required|in:LOW,MEDIUM,HIGH',
         'title' => 'required|string|max:255',
         'description' => 'nullable|string',
+        // 'status' => ['required', 'string', Rule::in(['TODO','IN_PROGRESS','IN_REVIEW','DONE'])],
     ]);
+    // kalau lolos, baru update
+// $task->update([
+//   'status' => $request->status,
+// ]);
 
     $position = $story->tasks()
         ->where('status', 'TODO')

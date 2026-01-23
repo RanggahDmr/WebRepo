@@ -8,6 +8,8 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\StoryController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\BoardController;
+
 
 
 Route::get('/', fn () => redirect()->route('dashboard'));
@@ -35,8 +37,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
     // Dashboard
-    Route::get('/dashboard', [EpicPageController::class, 'index'])
-        ->name('dashboard');
+    Route::get('/dashboard', [BoardController::class, 'index'])->name('dashboard');
+
+    // Route::get('/dashboard', [EpicPageController::class, 'index'])
+    //     ->name('dashboard');
 
     // Epic & Story view (read-only)
     Route::get('/epics/{epic}', [EpicPageController::class, 'show'])
@@ -53,6 +57,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/monitoring', [MonitoringController::class, 'index'])
     ->name('monitoring.index');
 
+    //boards
+    
+    Route::get('/boards/{board}', [BoardController::class, 'show'])->name('boards.show'); // redirect aja
+
+
+    // create board (PM only)
+    Route::post('/boards', [BoardController::class, 'store'])->name('boards.store');
+    Route::get('/boards/{board}/epics', [EpicPageController::class, 'index'])
+    ->name('epics.index');
+
 
 
     // Task board
@@ -63,15 +77,20 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:PM')->group(function () {
 
         // Epic
-        Route::post('/epics', [EpicPageController::class, 'store'])
-            ->name('epics.store');
+        // Route::post('/epics', [EpicPageController::class, 'store'])
+        //     ->name('epics.store');
 
+        Route::post('/boards/{board}/epics', [EpicPageController::class, 'store'])
+        ->name('epics.store');
+        
         Route::patch('/epics/{epic}', [EpicPageController::class, 'update'])
             ->name('epics.update');
 
         // Story
         Route::patch('/stories/{story}', [EpicPageController::class, 'updateStory'])
             ->name('stories.update');
+
+           
     });
 
     /*

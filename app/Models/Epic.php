@@ -15,6 +15,7 @@ class Epic extends Model
         'priority',
         'status',
         'created_by',
+        'board_id'
     ];
 
     
@@ -31,6 +32,11 @@ class Epic extends Model
     {
         return $this->hasMany(Story::class);
     }
+    public function board()
+{
+  return $this->belongsTo(Board::class);
+}
+
   
 public static function generateCode(): string
 {

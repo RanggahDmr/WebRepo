@@ -1,26 +1,52 @@
 import { Link, usePage } from "@inertiajs/react";
-import { PropsWithChildren, ReactNode } from "react";
+import { PropsWithChildren, ReactNode, useEffect, useState } from "react";
 import route from "@/lib/route";
 import FlashMessage from "@/components/ui/FlashMessage";
+import CreateBoardModal from "@/pages/Boards/CreateBoardModal";
 
 export default function AuthenticatedLayout({
   header,
   children,
   rightSidebar,
   rightSidebarOpen = false,
-}: PropsWithChildren<{ header?: ReactNode; rightSidebar?: ReactNode; rightSidebarOpen?: boolean }>) {
-
-  const { auth }: any = usePage().props;
+}: PropsWithChildren<{
+  header?: ReactNode;
+  rightSidebar?: ReactNode;
+  rightSidebarOpen?: boolean;
+}>) {
+  const { auth, navBoards, board }: any = usePage().props;
 
   // ===== ACTIVE STATE =====
-  const projectActive =
-    route().current("dashboard") ||
-    route().current("epics.show") ||
-    route().current("stories.show") ||
-    route().current("tasks.index");
+  const dashboardActive = route().current("dashboard");
+
+  const boardActive =
+  route().current("dashboard") ||
+  route().current("boards.index") ||
+  route().current("boards.show") ||
+  route().current("epics.index") ||   
+  route().current("epics.show") ||
+  route().current("stories.show") ||
+  route().current("tasks.index");
+
+
 
   const historyActive = route().current("history.index");
   const monitoringActive = route().current("monitoring.index");
+
+  //boards
+  const isPM = auth?.user?.role==="PM";
+  const [openCreateBoard, setOpenCreateBoard] = useState(false);
+
+  // Dropdown open/close
+  const [boardOpen, setBoardOpen] = useState<boolean>(!!boardActive);
+
+  const currentSquad = board?.squad ?? null;
+
+  
+  // Auto-open dropdown when user is in board/epic/story/task pages
+  useEffect(() => {
+    if (boardActive) setBoardOpen(true);
+  }, [boardActive]);
 
   return (
     <div className="h-screen w-full bg-gray-100 flex flex-col overflow-hidden">
@@ -47,18 +73,94 @@ export default function AuthenticatedLayout({
               <div className="h-full flex flex-col justify-between rounded-lg bg-white p-4 shadow-sm">
                 {/* NAV */}
                 <nav className="flex flex-col gap-1 overflow-y-auto">
-                  {/* PROJECT */}
+                  {/* BOARD (Dropdown) */}
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => setBoardOpen((v) => !v)}
+                      className={`rounded-md px-3 py-2 text-sm font-medium transition flex items-center justify-between
+                        ${
+                          boardActive
+                            ? "bg-black text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                    >
+                      <span>Board</span>
+                      <span
+                        className={`transition-transform ${
+                          boardOpen ? "rotate-180" : ""
+                        }`}
+                      >
+                        ▾
+                      </span>
+                    </button>
+
+                      
+                    {/* Dropdown items */}
+                    {boardOpen && (
+                <div className="mt-1 ml-2 flex flex-col gap-1">
                   <Link
                     href={route("dashboard")}
-                    className={`rounded-md px-3 py-2 text-sm font-medium transition
+                    className={`rounded-md px-3 py-2 text-sm transition
                       ${
-                        projectActive
-                          ? "bg-black text-white"
-                          : "text-gray-700 hover:bg-gray-100"
+                        route().current("dashboard")
+                          ? "bg-gray-100 text-gray-900 font-medium"
+                          : "text-gray-600 hover:bg-gray-50"
                       }`}
                   >
-                    Project
+                    All Boards
                   </Link>
+
+                 {(navBoards ?? []).map((b: any) => {
+                  const squad = b.squad ?? null;
+                  const isCurrent = !!currentSquad && squad === currentSquad;
+
+                  return (
+                    <Link
+                      key={squad ?? b.id}
+                      href={route("epics.index", squad ?? b.id)}
+                      className={[
+                        "rounded-md px-3 py-2 text-sm transition",
+                        isCurrent
+                          ? "bg-gray-100 text-gray-900 font-medium"
+                          : "hover:bg-gray-50 text-gray-700",
+                      ].join(" ")}
+                      title={squad}
+                    >
+                      <div className="font-medium">{b.title}</div>
+                      <div className="text-xs text-gray-500 truncate">{squad}</div>
+                    </Link>
+                  );
+                })}
+
+
+                  {/* ADD SQUAD (PM only) */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setOpenCreateBoard(true)}
+                      disabled={!isPM}
+                      className={`w-full rounded-md px-3 py-2 text-left text-sm transition flex items-center justify-between
+                        ${
+                          isPM
+                            ? "text-gray-700 hover:bg-gray-50"
+                            : "text-gray-400 cursor-not-allowed"
+                        }`}
+                      title={isPM ? "Create squad" : "PM only"}
+                    >
+                      <span>Add Squad</span>
+                      <span className="text-lg leading-none">+</span>
+                    </button>
+                  </div>
+
+                  <CreateBoardModal
+                    open={openCreateBoard}
+                    onClose={() => setOpenCreateBoard(false)}
+                  />
+                </div>
+              )}
+
+                  </div>
 
                   {/* HISTORY */}
                   <Link
@@ -111,89 +213,30 @@ export default function AuthenticatedLayout({
             </main>
 
             {/* RIGHT SIDEBAR */}
-               <div
-            className={[
-              "hidden xl:block shrink-0 h-full transition-all duration-300 ease-in-out",
-              rightSidebarOpen ? "w-[360px]" : "w-0",
-            ].join(" ")}
-          >
-            {/* Inner wrapper supaya konten ikut slide + fade */}
             <div
               className={[
-                "h-full overflow-y-auto transition-all duration-300 ease-in-out",
-                rightSidebarOpen
-                  ? "opacity-100 translate-x-0"
-                  : "opacity-0 translate-x-4 pointer-events-none",
+                "hidden xl:block shrink-0 h-full transition-all duration-300 ease-in-out",
+                rightSidebarOpen ? "w-[360px]" : "w-0",
               ].join(" ")}
             >
-              <div className="sticky top-0">
-                {/* render content only when provided */}
-                {rightSidebar}
+              {/* Inner wrapper supaya konten ikut slide + fade */}
+              <div
+                className={[
+                  "h-full overflow-y-auto transition-all duration-300 ease-in-out",
+                  rightSidebarOpen
+                    ? "opacity-100 translate-x-0"
+                    : "opacity-0 translate-x-4 pointer-events-none",
+                ].join(" ")}
+              >
+                <div className="sticky top-0">
+                  {/* render content only when provided */}
+                  {rightSidebar}
+                </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-
-
-
-
-  //  <aside className="hidden xl:block w-[360px] shrink-0 h-full">
-  //             <div className="h-full overflow-y-auto">
-  //               <div className="sticky top-0">
-  //                 {/* Default card / slot */}
-  //                 {rightSidebar ? (
-  //                   rightSidebar
-  //                 ) : (
-  //                   <div className="rounded-lg bg-white p-4 shadow-sm border">
-  //                     <div className="text-sm font-semibold text-gray-900">
-  //                       Task Detail
-  //                     </div>
-  //                     <div className="mt-2 text-xs text-gray-500">
-  //                       Click task on board/table for details at here.
-  //                     </div>
-
-  //                     <div className="mt-4 space-y-3">
-  //                       <div className="rounded-md bg-gray-50 p-3">
-  //                         <div className="text-xs text-gray-500">Title</div>
-  //                         <div className="text-sm text-gray-900 font-medium">
-  //                           -
-  //                         </div>
-  //                       </div>
-
-  //                       <div className="rounded-md bg-gray-50 p-3">
-  //                         <div className="text-xs text-gray-500">Status</div>
-  //                         <div className="text-sm text-gray-900 font-medium">
-  //                           -
-  //                         </div>
-  //                       </div>
-
-  //                       <div className="rounded-md bg-gray-50 p-3">
-  //                         <div className="text-xs text-gray-500">
-  //                           Description
-  //                         </div>
-  //                         <div className="text-sm text-gray-700">-</div>
-  //                       </div>
-  //                       <div className="rounded-md bg-gray-50 p-3">
-  //                         <div className="text-xs text-gray-500">
-  //                           Created At
-  //                         </div>
-  //                         <div className="text-sm text-gray-700">-</div>
-  //                       </div>
-  //                       <div className="rounded-md bg-gray-50 p-3">
-  //                         <div className="text-xs text-gray-500">
-  //                           Created By
-  //                         </div>
-  //                         <div className="text-sm text-gray-700">-</div>
-  //                       </div>
-  //                     </div>
-  //                   </div>
-  //                 )}
-  //               </div>
-  //             </div>
-  //           </aside>

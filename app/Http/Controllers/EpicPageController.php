@@ -8,18 +8,20 @@ use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Models\Board;
 
 
 
 class EpicPageController extends Controller
 {
-    public function index()
-    {
-
-       $epics = Epic::with('creator')
+   public function index(Board $board)
+{
+    $epics = Epic::with('creator')
+        ->where('board_id', $board->id)
         ->latest('updated_at')
         ->get([
             'id',
+            'board_id',
             'code',
             'create_work',
             'priority',
@@ -31,12 +33,16 @@ class EpicPageController extends Controller
         ]);
 
     return Inertia::render('Dashboard/Index', [
+        'board' => $board->only(['id', 'squad', 'title', 'created_at']),
+
         'epics' => $epics,
     ]);
-    }
+}
+
 
     public function show(Epic $epic)
     {
+        $epic->load(['creator', 'board']); 
        $stories = Story::with('creator') 
         ->where('epic_id', $epic->id)
         ->latest('updated_at')
@@ -54,6 +60,7 @@ class EpicPageController extends Controller
         ]);
 
     return Inertia::render('Epics/Show', [
+        'board' => $epic->board?->only(['id','squad','title', 'created_at']),
         'epic' => $epic->load('creator')->only([
             'id',
             'code',
@@ -71,17 +78,19 @@ class EpicPageController extends Controller
     }
 
     // PM only (route middleware role:PM)
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'code' => ['nullable','string','max:30','unique:epics,code'],
-            'description' => ['nullable', 'string'],
-            'create_work' => ['required','string','max:255'],
-            'priority' => ['required','in:LOW,MEDIUM,HIGH'],
-            'status' => ['required','in:TODO,IN_PROGRESS,DONE'],
-        ]);
-        
-        $epic = Epic::create([
+    public function store(Request $request, Board $board)
+{
+    abort_unless($request->user()?->role === 'PM', 403);
+
+    $validated = $request->validate([
+        'description' => ['nullable', 'string'],
+        'create_work' => ['required','string','max:255'],
+        'priority' => ['required','in:LOW,MEDIUM,HIGH'],
+        'status' => ['required','in:TODO,IN_PROGRESS,DONE'],
+    ]);
+
+    $epic = Epic::create([
+        'board_id' => $board->id,
         'code' => 'EP-' . strtoupper(Str::random(6)),
         'description' => $validated['description'] ?? null,
         'create_work' => $validated['create_work'],
@@ -90,13 +99,19 @@ class EpicPageController extends Controller
         'created_by' => auth()->id(),
     ]);
 
-         $epic->update([
+    $epic->update([
         'code' => 'EP-' . str_pad($epic->id, 5, '0', STR_PAD_LEFT),
-        
     ]);
 
-        return redirect()->route('dashboard');
-    }
+    return redirect()->route('epics.index', $board);
+
+    logger('EPIC STORE HIT', [
+  'board_param' => $board?->id,
+  'board_squad' => $board?->squad,
+]);
+
+}
+
 
     // PM only (route middleware role:PM)
    public function update(Request $request, Epic $epic)
@@ -186,4 +201,5 @@ public function updateStory(Request $request, Story $story)
 ->route('epics.show', [ 'epic' => $story->epic->code ])
         ->with('success', 'Story updated');
 }
+
 }

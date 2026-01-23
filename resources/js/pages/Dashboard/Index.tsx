@@ -8,8 +8,16 @@ import { useEpicFilters } from "./useEpicFilter";
 import EpicTable from "@/components/epics/EpicTable";
 import EpicFilters from "@/components/epics/EpicFilter";
 import EpicCreateModal from "@/components/epics/EpicCreateModal";
+import formatDateTime from "@/lib/date";
 
-export default function Dashboard({ epics }: { epics: Epic[] }) {
+type Board = {
+  id: number;
+  squad: string;
+  title: string;
+  created_at?: string;
+};
+
+export default function Dashboard({ epics, board }: { board: Board; epics: Epic[] }) {
   const { auth }: any = usePage().props;
   const isPM = auth?.user?.role === "PM";
 
@@ -23,7 +31,7 @@ export default function Dashboard({ epics }: { epics: Epic[] }) {
           <h2 className="text-2xl font-bold">Epics</h2>
           <Breadcrumbs
             items={[
-              { label: "Home", href: route("dashboard") },
+              { label: "Broads", href: route("dashboard") },
               { label: "Epics" },
             ]}
           />
@@ -31,6 +39,27 @@ export default function Dashboard({ epics }: { epics: Epic[] }) {
       }
     >
       <Head title="Dashboard" />
+      <div className="mb-6 rounded-xl border border-gray-100 bg-white">
+  <div className="px-6 py-5">
+    {/* Title + UUID */}
+    <div className="flex items-start justify-between gap-6">
+      <div>
+        <div className="text-lg font-semibold text-gray-900">
+          {board.title}
+        </div>
+        <div className="mt-1 text-sm text-gray-500">
+          Squad: <span className="font-mono  text-gray-700">{board.squad}</span>
+        </div>
+
+        <div className="mt-4 text-sm text-gray-600">
+          Created:{" "}
+          {board.created_at ? formatDateTime(board.created_at) : "-"}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
       <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
         <div className="mb-6 flex justify-between items-center">
@@ -63,6 +92,7 @@ export default function Dashboard({ epics }: { epics: Epic[] }) {
 
       {isPM && (
         <EpicCreateModal
+          board={board}
           open={openCreate}
           onClose={() => setOpenCreate(false)}
         />

@@ -7,27 +7,28 @@ import { EpicPriority, EpicStatus } from "@/types/epic";
 type Props = {
   open: boolean;
   onClose: () => void;
+  board: { squad: string }; 
 };
 
-export default function EpicCreateModal({ open, onClose }: Props) {
+export default function EpicCreateModal({ open, onClose, board }: Props) {
   const { data, setData, post, processing, errors, reset } = useForm({
     code: "",
     create_work: "",
-    description:"",
+    description: "",
     priority: "MEDIUM" as EpicPriority,
     status: "TODO" as EpicStatus,
   });
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    post(route("epics.store"), {
+
+    post(route("epics.store", board.squad), { 
       onSuccess: () => {
         reset();
         onClose();
       },
     });
   }
-
   return (
     <Modal open={open} onClose={onClose} title="Create Epic">
       <form onSubmit={submit} className="space-y-4">
@@ -54,6 +55,7 @@ export default function EpicCreateModal({ open, onClose }: Props) {
             className="rounded-lg border px-3 py-2"
             value={data.priority}
             onChange={(e) => setData("priority", e.target.value as any)}
+            defaultValue="LOW"
           >
             <option value="LOW">LOW</option>
             <option value="MEDIUM">MEDIUM</option>

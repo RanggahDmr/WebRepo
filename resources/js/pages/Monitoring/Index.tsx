@@ -7,8 +7,9 @@ import ProgressBar from "@/components/Monitoring/ProgressBar";
 import { DndContext } from "@dnd-kit/core";
 import { useTaskDnD } from "@/hooks/useTaskDnD";
 import TaskColumn from "../Tasks/TaskColumn";
-import { useState } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import TaskDetailCard from "@/components/Monitoring/TaskDetailCard";
+
 
 const STATUSES = [
   { key: "TODO", label: "TODO" },
@@ -22,15 +23,33 @@ export default function MonitoringIndex() {
 
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { handleDragEnd } = useTaskDnD(auth.user.role);
 
-  const grouped = STATUSES.reduce(
-    (acc, s) => {
-      acc[s.key] = tasks.data.filter((t: any) => t.status === s.key);
-      return acc;
+
+  const [taskItems, setTaskItems] = useState<any[]>(tasks.data);
+  const lastServerTasksRef = useRef<any[]>(tasks.data);
+
+
+   useEffect(() => {
+    setTaskItems(tasks.data);
+    lastServerTasksRef.current = tasks.data;
+  }, [tasks.data]);
+
+  const { sensors, handleDragEnd } = useTaskDnD(auth.user.role, {
+    optimisticUpdate: (taskId, toStatus) => {
+      setTaskItems((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: toStatus } : t))
+      );
     },
-    {} as Record<string, any[]>
-  );
+    rollback: () => {
+      setTaskItems(lastServerTasksRef.current);
+    },
+  });
+  const grouped = useMemo(() => {
+    return STATUSES.reduce((acc: any, s) => {
+      acc[s.key] = taskItems.filter((t) => t.status === s.key);
+      return acc;
+    }, {});
+  }, [taskItems]);
 
   function applyFilter(key: string, value: string) {
     router.get(
@@ -128,7 +147,7 @@ export default function MonitoringIndex() {
 
       {/* KANBAN (DnD) */}
       <div className="mt-8">
-        <DndContext onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-4 gap-5">
             {STATUSES.map((s) => (
               <div

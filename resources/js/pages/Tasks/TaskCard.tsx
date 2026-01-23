@@ -6,6 +6,7 @@ type Props = {
     id: number;
     title: string;
     type: "FE" | "BE" | "QA";
+    status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
   };
   canDrag: boolean;
   onOpen?: (task: any) => void;
@@ -14,37 +15,43 @@ type Props = {
 export default function TaskCard({ task, canDrag, onOpen }: Props) {
   const {
     setNodeRef,
+    setActivatorNodeRef,
     attributes,
     listeners,
     transform,
     transition,
+    isDragging,
   } = useSortable({
     id: task.id,
     disabled: !canDrag,
+    data: { type: "TASK", status: task.status }, // ⭐ penting
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.6 : 1,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
       className={`
-        rounded border bg-white p-3 text-sm shadow-sm
-        transition
-        hover:shadow
+        rounded border bg-white p-3 text-sm shadow-sm transition hover:shadow
         ${canDrag ? "" : "opacity-50"}
       `}
     >
-      {/* DRAG HANDLE */}
+      {/* DRAG HANDLE (only) */}
       {canDrag && (
         <div
+          ref={setActivatorNodeRef}
+          {...attributes}
           {...listeners}
-          className="mb-1 cursor-grab text-xs text-gray-400 select-none"
+          onClick={(e) => e.stopPropagation()} // klik handle ga buka sidebar
+          className="mb-1 cursor-grab text-xs text-gray-400 select-none w-fit"
+          style={{ touchAction: "none" }}
+          title="Drag"
         >
           ⋮⋮
         </div>
@@ -53,14 +60,12 @@ export default function TaskCard({ task, canDrag, onOpen }: Props) {
       {/* CLICKABLE CONTENT */}
       <div
         onClick={(e) => {
-          e.stopPropagation(); 
-          onOpen?.(task);      
+          e.stopPropagation();
+          onOpen?.(task);
         }}
         className="cursor-pointer"
       >
-        <div className="font-medium">
-           {task.title}
-        </div>
+        <div className="font-medium">{task.title}</div>
       </div>
     </div>
   );

@@ -184,7 +184,7 @@
 
 
     {/* TASKS CARD (KANBAN) */}
-    {/* <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100 h-full flex flex-col">
+    <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100 h-full flex flex-col">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
@@ -209,49 +209,23 @@
             + Add Task
           </button>
         )}
-      </div> */}
+      </div>
 
-      {/* KANBAN */}
-      {/* <DndContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-4 gap-5 flex-1">
-          {STATUSES.map((s) => (
-            <div
-              key={s.key}
-              className="flex flex-col rounded-xl bg-gray-50 border border-gray-200 p-3"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-xs font-semibold tracking-wide text-gray-600">
-                  {s.label}
-                </h3>
-                <span className="text-xs text-gray-400">
-                  {grouped[s.key].length}
-                </span>
-              </div>
-
-              <TaskColumn
-                status={s.key}
-                tasks={grouped[s.key]}
-                canDrag={["PROGRAMMER", "PM", "SAD"].includes(role)}
-                onOpenTask={(task: Task) => setSelectedTask(task)}
-              />
-            </div>
-          ))}
-        </div>
-      </DndContext> */}
+      
     </div>
 
     
-  //   <CreateTaskModal
-  //     open={openCreate}
-  //     onClose={() => setOpenCreate(false)}
-  //     storyCode={story.code}
-  //   />
+     <CreateTaskModal
+       open={openCreate}
+       onClose={() => setOpenCreate(false)}
+       storyCode={story.code}
+     />
 
-  //   <TaskDetailModal
-  //     task={selectedTask}
-  //     onClose={() => setSelectedTask(null)}
-  //   />
-  // </div>
+     <TaskDetailModal
+       task={selectedTask}
+     onClose={() => setSelectedTask(null)}
+    />
+  </div>
 );
 
 
@@ -269,7 +243,7 @@ TaskBoard.layout = (page: any) => {
           <Breadcrumbs
             items={[
            
-            { label: "Epics", href: route("dashboard") },
+            { label: "Board", href: route("dashboard") },
             {
               label: epic.code,
               href: route("epics.show", epic.code),
