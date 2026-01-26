@@ -9,10 +9,12 @@ use App\Http\Controllers\StoryController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\BoardController;
+use App\Http\Controllers\BoardMonitoringController;
 
 
 
 Route::get('/', fn () => redirect()->route('dashboard'));
+
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +58,12 @@ Route::middleware('auth')->group(function () {
     //Monitoring
     Route::get('/monitoring', [MonitoringController::class, 'index'])
     ->name('monitoring.index');
+     Route::get('/monitoring/tasks',   [MonitoringController::class, 'tasks'])->name('monitoring.tasks');
+     Route::get('/monitoring', [\App\Http\Controllers\MonitoringController::class, 'index'])
+    ->name('monitoring.index');
+
+    // Route::get('/monitoring/epics',   [MonitoringController::class, 'epics'])->name('monitoring.epics');
+    // Route::get('/monitoring/stories', [MonitoringController::class, 'stories'])->name('monitoring.stories');
 
 
     //boards
