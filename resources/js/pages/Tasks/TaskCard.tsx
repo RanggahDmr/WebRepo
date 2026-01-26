@@ -3,10 +3,12 @@ import { CSS } from "@dnd-kit/utilities";
 
 type Props = {
   task: {
-    id: number;
+    uuid: string;
     title: string;
-    type: "FE" | "BE" | "QA";
+    type?: "FE" | "BE" | "QA" | null;
     status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+    code?: string | null;
+    priority?: "LOW" | "MEDIUM" | "HIGH";
   };
   canDrag: boolean;
   onOpen?: (task: any) => void;
@@ -22,16 +24,18 @@ export default function TaskCard({ task, canDrag, onOpen }: Props) {
     transition,
     isDragging,
   } = useSortable({
-    id: task.id,
+    id: task.uuid, 
     disabled: !canDrag,
-    data: { type: "TASK", status: task.status }, // ⭐ penting
+    data: { type: "TASK", status: task.status }, // tetap
   });
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
   };
+
+  const code = task.code ?? `TSK-${task.uuid.slice(0, 8).toUpperCase()}`;
 
   return (
     <div
@@ -65,6 +69,7 @@ export default function TaskCard({ task, canDrag, onOpen }: Props) {
         }}
         className="cursor-pointer"
       >
+        <div className="text-[11px] text-gray-500">{code}</div>
         <div className="font-medium">{task.title}</div>
       </div>
     </div>

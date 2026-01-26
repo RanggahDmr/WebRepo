@@ -1,5 +1,5 @@
 export type Story = {
-  id: number;
+  uuid: string;
   epic_id: number;
   code: string;
   title: string;

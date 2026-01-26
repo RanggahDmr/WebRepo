@@ -57,6 +57,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/monitoring', [MonitoringController::class, 'index'])
     ->name('monitoring.index');
 
+
     //boards
     
     Route::get('/boards/{board}', [BoardController::class, 'show'])->name('boards.show'); // redirect aja
@@ -73,12 +74,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/stories/{story}/tasks', [TaskController::class, 'index'])
         ->name('tasks.index');
 
+     Route::patch('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+
+
    
     Route::middleware('role:PM')->group(function () {
 
         // Epic
-        // Route::post('/epics', [EpicPageController::class, 'store'])
-        //     ->name('epics.store');
+       
 
         Route::post('/boards/{board}/epics', [EpicPageController::class, 'store'])
         ->name('epics.store');

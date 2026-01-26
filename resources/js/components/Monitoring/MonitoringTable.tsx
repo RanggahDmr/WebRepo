@@ -3,21 +3,21 @@ import formatDateTime from "@/lib/date";
 
 interface Props {
   tasks: any[];
-  selectedTaskId?: number | null;
+  selectedTaskUuid?: string | null;
   onSelectTask?: (task: any) => void;
+}
+
+function shortUuid(u?: string) {
+  if (!u) return "-";
+  return u.slice(0, 8).toUpperCase();
 }
 
 export default function MonitoringTable({
   tasks,
-  selectedTaskId = null,
+  selectedTaskUuid = null,
   onSelectTask,
 }: Props) {
-  function formatTaskCode(id: number) {
-    return `TSK-${String(id).padStart(4, "0")}`;
-  }
-
   return (
-    /* CARD WRAPPER */
     <div className="bg-white rounded-lg shadow-sm overflow-hidden border">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm table-fixed">
@@ -35,13 +35,14 @@ export default function MonitoringTable({
 
           <tbody>
             {tasks
-              .filter((t) => t?.id)
+              .filter((t) => t?.uuid)
               .map((t) => {
-                const isSelected = selectedTaskId === t.id;
+                const isSelected = selectedTaskUuid === t.uuid;
+                const code = t.code ?? `TSK-${shortUuid(t.uuid)}`;
 
                 return (
                   <tr
-                    key={t.id}
+                    key={t.uuid}
                     role={onSelectTask ? "button" : undefined}
                     tabIndex={onSelectTask ? 0 : -1}
                     onClick={() => onSelectTask?.(t)}
@@ -52,42 +53,23 @@ export default function MonitoringTable({
                     className={[
                       "border-b last:border-0 transition",
                       onSelectTask ? "cursor-pointer" : "",
-                      isSelected
-                        ? "bg-gray-100"
-                        : "hover:bg-gray-50",
+                      isSelected ? "bg-gray-100" : "hover:bg-gray-50",
                     ].join(" ")}
                   >
-                    {/* CODE */}
-                    <td className="px-4 py-3 font-medium text-blue-600">
-                      {formatTaskCode(t.id)}
-                    </td>
-
-                    {/* WORK */}
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {t.title}
-                    </td>
-
-                    {/* PRIORITY */}
+                    <td className="px-4 py-3 font-medium text-blue-600">{code}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{t.title}</td>
                     <td className="px-4 py-3">
                       <Badge variant={t.priority}>{t.priority}</Badge>
                     </td>
-
-                    {/* STATUS */}
                     <td className="px-4 py-3">
                       <Badge variant={t.status}>{t.status}</Badge>
                     </td>
-
-                    {/* CREATED */}
                     <td className="px-4 py-3 text-gray-700">
                       {formatDateTime(t.created_at)}
                     </td>
-
-                    {/* UPDATED */}
                     <td className="px-4 py-3 text-gray-700">
                       {formatDateTime(t.updated_at)}
                     </td>
-
-                    {/* CREATED BY */}
                     <td className="px-4 py-3 text-gray-700">
                       {t.creator?.name ?? "-"}
                     </td>

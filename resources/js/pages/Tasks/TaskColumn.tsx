@@ -12,12 +12,12 @@ export default function TaskColumn({ status, tasks, canDrag, onOpenTask }: any) 
     <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[80px]">
       <SortableContext
         id={status}
-        items={tasks.map((t: any) => t.id)}
+        items={tasks.map((t: any) => t.uuid)}
         strategy={verticalListSortingStrategy}
       >
         {tasks.map((task: any) => (
           <TaskCard
-            key={task.id}
+            key={task.uuid}
             task={task}
             canDrag={canDrag}
             onOpen={onOpenTask}

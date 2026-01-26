@@ -51,7 +51,7 @@ export default function StoryEditModal({ story, onClose }: Props) {
     e.preventDefault();
      if (!story) return null;
 
-    patch(route("stories.update", story.id), {
+    patch(route("stories.update", story.uuid), {
       onSuccess: onClose,
     });
   }

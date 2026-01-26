@@ -6,21 +6,24 @@ use Illuminate\Database\Eloquent\Model;
 
 class Board extends Model
 {
-  protected $fillable = ['squad', 'title', 'created_by'];
+    protected $primaryKey = 'uuid';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
-  public function creator()
-  {
-    return $this->belongsTo(User::class, 'created_by');
-  }
+    protected $fillable = ['uuid', 'squad_code', 'title', 'created_by'];
 
-  public function epics()
-  {
-    return $this->hasMany(Epic::class);
-  }
-  public function getRouteKeyName()
-{
-    return 'squad';
+    public function getRouteKeyName()
+    {
+        return 'uuid';
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function epics()
+    {
+        return $this->hasMany(Epic::class, 'board_uuid', 'uuid');
+    }
 }
-
-}
-

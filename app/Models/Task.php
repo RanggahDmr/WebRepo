@@ -2,39 +2,46 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User; 
 
 class Task extends Model
 {
+    protected $primaryKey = 'uuid';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
-    'story_id',
-    'priority',
-    'title',
-    'description',
-    'status',
-    'position',
-    'assignee_id',
-    'created_by'
+        'uuid',
+        'story_uuid',
+        'code',
+        'priority',
+        'title',
+        'description',
+        'type',
+        'status',
+        'position',
+        'assignee_id',
+        'created_by',
+    ];
 
-
-];
-  public function creator()
-   
- 
+    public function getRouteKeyName()
     {
-
-        return $this->belongsTo(User::class, 'created_by');
+        return 'uuid';
     }
 
-
-    public function story()
+    public function creator()
     {
-        return $this->belongsTo(Story::class);
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assignee_id');
+    }
+
+    public function story()
+    {
+        return $this->belongsTo(Story::class, 'story_uuid', 'uuid');
     }
 }

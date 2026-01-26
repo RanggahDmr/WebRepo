@@ -36,7 +36,7 @@ export default function EpicDetailModal({
         <div className="space-y-3 text-sm">
           <div>
             <div className="text-gray-500">Work</div>
-            <div className="font-medium">{epic.create_work}</div>
+            <div className="font-medium">{epic.title}</div>
           </div>
 
           <div>

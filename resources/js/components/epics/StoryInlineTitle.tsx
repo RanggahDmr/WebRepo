@@ -3,11 +3,11 @@ import { router } from "@inertiajs/react";
 import route from "@/lib/route";
 
 type Props = {
-  storyCode: string;
+  storyUuid: string;
   value: string;
 };
 
-export default function StoryInlineTitle({ storyCode, value }: Props) {
+export default function StoryInlineTitle({ storyUuid, value }: Props) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value);
 
@@ -20,7 +20,7 @@ export default function StoryInlineTitle({ storyCode, value }: Props) {
     }
 
     router.patch(
-      route("stories.update", {story: storyCode}),
+      route("stories.update", {story: storyUuid}),
       { title: text },
       { preserveScroll: true }
     );

@@ -46,7 +46,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
         <tbody>
           {stories.map((s) => (
             <tr
-              key={s.id}
+              key={s.uuid}
               className="border-b last:border-0 hover:bg-gray-50 transition align-top"
             >
               {/* ID / CODE */}
@@ -68,7 +68,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
               <td className="px-4 py-3 font-medium text-gray-900">
                 {canCreateStory ? (
                   <StoryInlineTitle
-                    storyCode={s.code}
+                    storyUuid={s.uuid}
                     value={s.title}
                   />
                 ) : (
@@ -90,7 +90,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
               <td className="px-4 py-3">
                 {canCreateStory ? (
                   <StoryInlineSelect
-                    storyCode={s.code}
+                    storyUuid={s.uuid}
                     field="priority"
                     value={s.priority}
                     options={[
@@ -108,7 +108,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
               <td className="px-4 py-3">
                 {canCreateStory ? (
                   <StoryInlineSelect
-                    storyCode={s.code}
+                    storyUuid={s.uuid}
                     field="status"
                     value={s.status}
                     options={[
@@ -144,7 +144,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
                   <button
                     type="button"
                     onClick={() =>
-                      window.location.href = route("tasks.index", { story: s.code })
+                      window.location.href = route("tasks.index", { story: s.uuid })
                     }
                     className="rounded-md border px-3 py-1.5 text-sm font-medium text-white bg-black hover:bg-gray-800 " 
                   >

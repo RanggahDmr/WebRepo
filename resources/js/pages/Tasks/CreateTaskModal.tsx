@@ -1,14 +1,13 @@
-// import { route } from "ziggy-js";
 import { router } from "@inertiajs/react";
 import route from "@/lib/route";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  storyCode: string;
+  storyUuid: string;
 };
 
-export default function CreateTaskModal({ open, onClose, storyCode }: Props) {
+export default function CreateTaskModal({ open, onClose, storyUuid }: Props) {
   if (!open) return null;
 
   return (
@@ -23,24 +22,22 @@ export default function CreateTaskModal({ open, onClose, storyCode }: Props) {
             const data = new FormData(form);
 
             router.post(
-              route("tasks.store", { story: storyCode }),
+              route("tasks.store", { story: storyUuid }),
               Object.fromEntries(data),
-              { onSuccess: onClose }
+              { onSuccess: onClose, preserveScroll: true }
             );
           }}
           className="space-y-3"
-        > 
-          
+        >
           <select
-              name="priority"
-              className="w-full rounded border px-3 py-2 text-sm"
-              defaultValue="Low"
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-            </select>
-
+            name="priority"
+            className="w-full rounded border px-3 py-2 text-sm"
+            defaultValue="MEDIUM"
+          >
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+          </select>
 
           <input
             name="title"

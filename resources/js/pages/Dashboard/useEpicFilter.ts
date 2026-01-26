@@ -12,7 +12,7 @@ export function useEpicFilters(epics: Epic[]) {
     return epics.filter((e) => {
       const okQuery =
         !query ||
-        e.create_work.toLowerCase().includes(query) ||
+        e.title.toLowerCase().includes(query) ||
         (e.code ?? "").toLowerCase().includes(query);
 
       return (

@@ -9,7 +9,7 @@ function log_activity(Model $subject, string $action, array $changes = [])
     ActivityLog::create([
         'user_id' => auth()->id(),
         'subject_type' => get_class($subject),
-        'subject_id' => $subject->id,
+        'subject_id' => $subject->uuid,
         'action' => $action,
         'changes' => $changes,
     ]);

@@ -16,34 +16,28 @@ export default function AuthenticatedLayout({
 }>) {
   const { auth, navBoards, board }: any = usePage().props;
 
-  // ===== ACTIVE STATE =====
   const dashboardActive = route().current("dashboard");
 
   const boardActive =
-  route().current("dashboard") ||
-  route().current("boards.index") ||
-  route().current("boards.show") ||
-  route().current("epics.index") ||   
-  route().current("epics.show") ||
-  route().current("stories.show") ||
-  route().current("tasks.index");
-
-
+    route().current("dashboard") ||
+    route().current("boards.index") ||
+    route().current("boards.show") ||
+    route().current("epics.index") ||
+    route().current("epics.show") ||
+    route().current("stories.show") ||
+    route().current("tasks.index");
 
   const historyActive = route().current("history.index");
   const monitoringActive = route().current("monitoring.index");
 
-  //boards
-  const isPM = auth?.user?.role==="PM";
+  const isPM = auth?.user?.role === "PM";
   const [openCreateBoard, setOpenCreateBoard] = useState(false);
 
-  // Dropdown open/close
   const [boardOpen, setBoardOpen] = useState<boolean>(!!boardActive);
 
-  const currentSquad = board?.squad ?? null;
+  // current board uuid dari props (kalau halaman epics/show/story/tasks ngirim 'board')
+  const currentBoardUuid = board?.uuid ?? null;
 
-  
-  // Auto-open dropdown when user is in board/epic/story/task pages
   useEffect(() => {
     if (boardActive) setBoardOpen(true);
   }, [boardActive]);
@@ -65,7 +59,6 @@ export default function AuthenticatedLayout({
 
       {/* BODY */}
       <div className="flex-1 min-h-0">
-        {/* Full width container */}
         <div className="w-full px-6 py-6 h-full">
           <div className="flex gap-6 h-full min-h-0">
             {/* LEFT SIDEBAR */}
@@ -95,71 +88,71 @@ export default function AuthenticatedLayout({
                       </span>
                     </button>
 
-                      
                     {/* Dropdown items */}
                     {boardOpen && (
-                <div className="mt-1 ml-2 flex flex-col gap-1">
-                  <Link
-                    href={route("dashboard")}
-                    className={`rounded-md px-3 py-2 text-sm transition
-                      ${
-                        route().current("dashboard")
-                          ? "bg-gray-100 text-gray-900 font-medium"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                  >
-                    All Boards
-                  </Link>
+                      <div className="mt-1 ml-2 flex flex-col gap-1">
+                        <Link
+                          href={route("dashboard")}
+                          className={`rounded-md px-3 py-2 text-sm transition
+                            ${
+                              dashboardActive
+                                ? "bg-gray-100 text-gray-900 font-medium"
+                                : "text-gray-600 hover:bg-gray-50"
+                            }`}
+                        >
+                          All Boards
+                        </Link>
 
-                 {(navBoards ?? []).map((b: any) => {
-                  const squad = b.squad ?? null;
-                  const isCurrent = !!currentSquad && squad === currentSquad;
+                        {(navBoards ?? []).map((b: any) => {
+                          const uuid = b.uuid ?? null;
+                          const squadCode = b.squad_code ?? null;
+                          const isCurrent = !!currentBoardUuid && uuid === currentBoardUuid;
 
-                  return (
-                    <Link
-                      key={squad ?? b.id}
-                      href={route("epics.index", squad ?? b.id)}
-                      className={[
-                        "rounded-md px-3 py-2 text-sm transition",
-                        isCurrent
-                          ? "bg-gray-100 text-gray-900 font-medium"
-                          : "hover:bg-gray-50 text-gray-700",
-                      ].join(" ")}
-                      title={squad}
-                    >
-                      <div className="font-medium">{b.title}</div>
-                      <div className="text-xs text-gray-500 truncate">{squad}</div>
-                    </Link>
-                  );
-                })}
+                          return (
+                            <Link
+                              key={uuid}
+                              href={route("epics.index", { board: uuid })}
+                              className={[
+                                "rounded-md px-3 py-2 text-sm transition",
+                                isCurrent
+                                  ? "bg-gray-100 text-gray-900 font-medium"
+                                  : "hover:bg-gray-50 text-gray-700",
+                              ].join(" ")}
+                              title={squadCode ?? ""}
+                            >
+                              <div className="font-medium">{b.title}</div>
+                              <div className="text-xs text-gray-500 truncate">
+                                {squadCode ?? "-"}
+                              </div>
+                            </Link>
+                          );
+                        })}
 
+                        {/* ADD SQUAD (PM only) */}
+                        <div className="pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setOpenCreateBoard(true)}
+                            disabled={!isPM}
+                            className={`w-full rounded-md px-3 py-2 text-left text-sm transition flex items-center justify-between
+                              ${
+                                isPM
+                                  ? "text-gray-700 hover:bg-gray-50"
+                                  : "text-gray-400 cursor-not-allowed"
+                              }`}
+                            title={isPM ? "Create board" : "PM only"}
+                          >
+                            <span>Add Squad</span>
+                            <span className="text-lg leading-none">+</span>
+                          </button>
+                        </div>
 
-                  {/* ADD SQUAD (PM only) */}
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setOpenCreateBoard(true)}
-                      disabled={!isPM}
-                      className={`w-full rounded-md px-3 py-2 text-left text-sm transition flex items-center justify-between
-                        ${
-                          isPM
-                            ? "text-gray-700 hover:bg-gray-50"
-                            : "text-gray-400 cursor-not-allowed"
-                        }`}
-                      title={isPM ? "Create squad" : "PM only"}
-                    >
-                      <span>Add Squad</span>
-                      <span className="text-lg leading-none">+</span>
-                    </button>
-                  </div>
-
-                  <CreateBoardModal
-                    open={openCreateBoard}
-                    onClose={() => setOpenCreateBoard(false)}
-                  />
-                </div>
-              )}
-
+                        <CreateBoardModal
+                          open={openCreateBoard}
+                          onClose={() => setOpenCreateBoard(false)}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* HISTORY */}
@@ -219,7 +212,6 @@ export default function AuthenticatedLayout({
                 rightSidebarOpen ? "w-[360px]" : "w-0",
               ].join(" ")}
             >
-              {/* Inner wrapper supaya konten ikut slide + fade */}
               <div
                 className={[
                   "h-full overflow-y-auto transition-all duration-300 ease-in-out",
@@ -228,10 +220,7 @@ export default function AuthenticatedLayout({
                     : "opacity-0 translate-x-4 pointer-events-none",
                 ].join(" ")}
               >
-                <div className="sticky top-0">
-                  {/* render content only when provided */}
-                  {rightSidebar}
-                </div>
+                <div className="sticky top-0">{rightSidebar}</div>
               </div>
             </div>
           </div>

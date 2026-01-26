@@ -30,7 +30,7 @@ class HandleInertiaRequests extends Middleware
             // buat dropdown sidebar
             'navBoards' => fn () => $request->user()
                 ? Board::query()
-                    ->select('id', 'squad', 'title')
+                    ->select('uuid', 'squad_code', 'title')
                     ->latest('updated_at')
                     ->get()
                 : [],

@@ -9,14 +9,14 @@ type Option = {
 };
 
 type Props = {
-  epicCode: string;
+  epicUuid: string;
   value: string;
   options: Option[];
   field: "priority" | "status";
 };
 
 export default function EpicInlineSelect({
-  epicCode,
+  epicUuid,
   value,
   options,
   field,
@@ -30,7 +30,7 @@ export default function EpicInlineSelect({
     if (val === value) return;
 
     router.patch(
-      route("epics.update", { epic: epicCode }),
+      route("epics.update", { epic: epicUuid }),
       { [field]: val },
       { preserveScroll: true }
     );

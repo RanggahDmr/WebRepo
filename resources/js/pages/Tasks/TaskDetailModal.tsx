@@ -2,7 +2,7 @@ import { Task } from "@/types/task";
 import Badge from "@/components/ui/Badge";
 
 type Props = {
-  task: Task | null;
+  task: Task;
   onClose: () => void;
 };
 

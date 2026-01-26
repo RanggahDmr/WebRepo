@@ -11,7 +11,7 @@ export default function EpicSummary({ epic }: { epic: Epic }) {
       {/* TITLE + CODE */}
       <div className="flex items-baseline gap-3">
         <div className="text-xl font-semibold text-gray-900">
-          {epic.create_work}
+          {epic.title}
         </div>
 
         {epic.code && (

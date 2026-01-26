@@ -6,9 +6,9 @@ type Props = {
   onClose?: () => void;
 };
 
-function fallbackCode(prefix: string, n?: number, pad = 4) {
-  if (!n && n !== 0) return "-";
-  return `${prefix}-${String(n).padStart(pad, "0")}`;
+function shortUuid(u?: string) {
+  if (!u) return "-";
+  return u.slice(0, 8).toUpperCase();
 }
 
 export default function TaskDetailCard({ task, onClose }: Props) {
@@ -33,27 +33,25 @@ export default function TaskDetailCard({ task, onClose }: Props) {
   const story = task.story;
   const epic = task.story?.epic;
 
-  const taskCode = fallbackCode("TSK", task.id);
-const epicTitle = epic?.create_work ?? "-";   // <-- penting: epics pakai create_work
-const storyTitle = story?.title ?? "-";
+  const taskCode = task.code ?? `TSK-${shortUuid(task.uuid)}`;
+  const epicTitle = epic?.title ?? "-";
+  const storyTitle = story?.title ?? "-";
 
-const epicCode = epic?.code ?? "-";
-const storyCode = story?.code ?? "-";
+  const epicCode = epic?.code ?? "-";
+  const storyCode = story?.code ?? "-";
 
   return (
     <div className="rounded-lg bg-white p-4 shadow-sm border">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        
         <div className="min-w-0">
           <div className="text-xs font-medium text-gray-500">{taskCode}</div>
           <div className="mt-1 text-2xl font-semibold text-gray-900 break-words">
             {task.title ?? "-"}
           </div>
-          <div className="mt-1 text-sm  text-gray-900 break-words">
-            {task.description}
+          <div className="mt-1 text-sm text-gray-900 break-words">
+            {task.description ?? "-"}
           </div>
-
         </div>
 
         {onClose && (
@@ -69,12 +67,8 @@ const storyCode = story?.code ?? "-";
 
       {/* Badges */}
       <div className="mt-3 flex flex-wrap gap-2">
-        {task.priority ? (
-          <Badge variant={task.priority}>{task.priority}</Badge>
-        ) : null}
-
+        {task.priority ? <Badge variant={task.priority}>{task.priority}</Badge> : null}
         {task.status ? <Badge variant={task.status}>{task.status}</Badge> : null}
-
         {task.type ? <Badge variant={task.type}>{task.type}</Badge> : null}
       </div>
 
@@ -88,19 +82,19 @@ const storyCode = story?.code ?? "-";
           <div className="mt-2">
             <div className="text-xs text-gray-500">Epic</div>
             <div className="mt-0.5 text-sm font-medium text-gray-900 break-words">
-              {epic ? `${epicCode} — ${epicTitle ?? "-"}` : "-"}
+              {epic ? `${epicCode} — ${epicTitle}` : "-"}
             </div>
           </div>
 
           <div className="mt-3">
             <div className="text-xs text-gray-500">Story</div>
             <div className="mt-0.5 text-sm font-medium text-gray-900 break-words">
-              {story ? `${storyCode} — ${story.title ?? "-"}` : "-"}
+              {story ? `${storyCode} — ${storyTitle}` : "-"}
             </div>
           </div>
         </div>
 
-        {/* People */}
+        {/* People + Dates */}
         <div className="rounded-md bg-gray-50 p-3">
           <div className="text-[11px] uppercase tracking-wide text-gray-500">
             People
@@ -117,11 +111,8 @@ const storyCode = story?.code ?? "-";
               <span className="font-medium">{task.assignee?.name ?? "-"}</span>
             </div>
           </div>
-        
 
-        {/* Dates */}
-        
-          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+          <div className="mt-4 text-[11px] uppercase tracking-wide text-gray-500">
             Dates
           </div>
 
@@ -141,9 +132,6 @@ const storyCode = story?.code ?? "-";
             </div>
           </div>
         </div>
-
-        {/* Description */}
-      
       </div>
     </div>
   );

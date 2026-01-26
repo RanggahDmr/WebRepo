@@ -4,16 +4,15 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 
 export default function StoryCreateModal({
-  epicCode,
+  epicUuid,
   open,
   onClose,
 }: {
-  epicCode: string;
+  epicUuid: string;
   open: boolean;
   onClose: () => void;
 }) {
-  const { data, setData, post, processing } = useForm({
-    code: "",
+  const { data, setData, post, processing, reset } = useForm({
     title: "",
     description: "",
     priority: "MEDIUM",
@@ -22,8 +21,12 @@ export default function StoryCreateModal({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    post(route("stories.store", epicCode), {
-      onSuccess: onClose,
+
+    post(route("stories.store", { epic: epicUuid }), {
+      onSuccess: () => {
+        reset();
+        onClose();
+      },
     });
   }
 
@@ -48,7 +51,7 @@ export default function StoryCreateModal({
           <Button variant="secondary" onClick={onClose} type="button">
             Cancel
           </Button>
-          <Button disabled={processing}>Save</Button>
+          <Button disabled={processing}>{processing ? "Saving..." : "Save"}</Button>
         </div>
       </form>
     </Modal>

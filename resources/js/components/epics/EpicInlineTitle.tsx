@@ -3,11 +3,11 @@ import { router } from "@inertiajs/react";
 import route from "@/lib/route";
 
 type Props = {
-  epicCode: string;
+  epicUuid: string;
   value: string;
 };
 
-export default function EpicInlineTitle({ epicCode, value }: Props) {
+export default function EpicInlineTitle({ epicUuid, value }: Props) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value);
 
@@ -20,8 +20,8 @@ export default function EpicInlineTitle({ epicCode, value }: Props) {
     }
 
     router.patch(
-      route("epics.update", { epic: epicCode }),
-      { create_work: text },
+      route("epics.update", { epic: epicUuid }),
+      { title: text },
       { preserveScroll: true }
     );
   }

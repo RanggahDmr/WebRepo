@@ -34,16 +34,15 @@ export default function MonitoringIndex() {
     lastServerTasksRef.current = tasks.data;
   }, [tasks.data]);
 
-  const { sensors, handleDragEnd } = useTaskDnD(auth.user.role, {
-    optimisticUpdate: (taskId, toStatus) => {
-      setTaskItems((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: toStatus } : t))
-      );
-    },
-    rollback: () => {
-      setTaskItems(lastServerTasksRef.current);
-    },
-  });
+const { sensors, handleDragEnd } = useTaskDnD(auth.user.role, {
+  optimisticUpdate: (taskUuid, toStatus) => {
+    setTaskItems((prev) =>
+      prev.map((t) => (t.uuid === taskUuid ? { ...t, status: toStatus } : t))
+    );
+  },
+  rollback: () => setTaskItems(lastServerTasksRef.current),
+});
+
   const grouped = useMemo(() => {
     return STATUSES.reduce((acc: any, s) => {
       acc[s.key] = taskItems.filter((t) => t.status === s.key);
@@ -138,8 +137,8 @@ export default function MonitoringIndex() {
 
       {/* TABLE */}
       <MonitoringTable
-        tasks={tasks.data}
-        selectedTaskId={selectedTask?.id ?? null}
+         tasks={taskItems} // biar table ikut optimistic update juga
+        selectedTaskUuid={selectedTask?.uuid ?? null}
         onSelectTask={openTask}
       />
 

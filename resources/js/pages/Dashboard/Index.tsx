@@ -11,7 +11,7 @@ import EpicCreateModal from "@/components/epics/EpicCreateModal";
 import formatDateTime from "@/lib/date";
 
 type Board = {
-  id: number;
+  uuid: string;
   squad: string;
   title: string;
   created_at?: string;

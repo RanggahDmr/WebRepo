@@ -3,45 +3,47 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
-use App\Models\Story;
+use Illuminate\Support\Str;
 
 class Epic extends Model
 {
+    protected $primaryKey = 'uuid';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
+        'uuid',
+        'board_uuid',
         'code',
-        'create_work',
+        'title',
         'description',
         'priority',
         'status',
         'created_by',
-        'board_id'
     ];
 
-    
- public function creator()
+    public function getRouteKeyName()
+    {
+        return 'uuid';
+    }
+
+    public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function getRouteKeyName()
-    {
-        return 'code';
-    }
-       public function stories()
-    {
-        return $this->hasMany(Story::class);
-    }
     public function board()
-{
-  return $this->belongsTo(Board::class);
-}
+    {
+        return $this->belongsTo(Board::class, 'board_uuid', 'uuid');
+    }
 
-  
-public static function generateCode(): string
-{
-    return 'EP-' . str_pad(self::max('id') + 1, 4, '0', STR_PAD_LEFT);
-}
+    public function stories()
+    {
+        return $this->hasMany(Story::class, 'epic_uuid', 'uuid');
+    }
 
+    public static function generateCode(): string
+    {
+        return 'EP-' . strtoupper(Str::random(6));
+    }
 }
-

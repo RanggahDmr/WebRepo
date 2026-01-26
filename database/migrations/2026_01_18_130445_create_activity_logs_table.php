@@ -1,5 +1,5 @@
-
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,15 +12,14 @@ return new class extends Migration {
 
             $table->foreignId('user_id')
                 ->nullable()
-                ->constrained()
+                ->constrained('users')
                 ->nullOnDelete();
 
             $table->string('subject_type');
-            $table->unsignedBigInteger('subject_id');
+            $table->uuid('subject_id');
 
-            $table->string('action'); 
+            $table->string('action');
             $table->json('changes')->nullable();
-
             $table->timestamps();
 
             $table->index(['subject_type', 'subject_id']);

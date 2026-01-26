@@ -5,18 +5,19 @@ import Badge from "@/components/ui/Badge";
 
 type Option = {
   label: string;
+  
   value: string;
 };
 
 type Props = {
-  storyCode: string;
+  storyUuid: string;
   field: "priority" | "status";
   value: string;
   options: Option[];
 };
 
 export default function StoryInlineSelect({
-  storyCode,
+  storyUuid,
   field,
   value,
   options,
@@ -30,7 +31,7 @@ export default function StoryInlineSelect({
     if (val === value) return;
 
     router.patch(
-      route("stories.update", { story: storyCode }),
+      route("stories.update", { story: storyUuid }),
       { [field]: val },
       {
         preserveScroll: true,

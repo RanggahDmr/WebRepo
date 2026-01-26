@@ -2,10 +2,10 @@ import { useState } from "react";
 import CreateTaskModal from "./CreateTaskModal";
 
 type TaskFilterProps = {
-  storyCode: string;
+  storyUuid: string;
 };
 
-export default function TaskFilter({ storyCode }: TaskFilterProps) {
+export default function TaskFilter({ storyUuid }: TaskFilterProps) {
   const [openCreate, setOpenCreate] = useState(false);
 
   return (
@@ -77,7 +77,7 @@ export default function TaskFilter({ storyCode }: TaskFilterProps) {
       <CreateTaskModal
         open={openCreate}
         onClose={() => setOpenCreate(false)}
-        storyCode={storyCode}
+        storyUuid={storyUuid}
       />
     </>
   );

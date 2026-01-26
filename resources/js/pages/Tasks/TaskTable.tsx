@@ -2,6 +2,7 @@ import { useState } from "react";
 import Badge from "@/components/ui/Badge";
 import { Task } from "@/types/task";
 import TaskDetailModal from "./TaskDetailModal";
+
 function formatDate(date?: string | null) {
   if (!date) return "-";
   return new Date(date).toLocaleString("id-ID", {
@@ -10,29 +11,24 @@ function formatDate(date?: string | null) {
   });
 }
 
-function formatTaskCode(id: number) {
-  return `TSK-${String(id).padStart(4, "0")}`;
+function displayTaskCode(task: any) {
+  if (task?.code) return task.code;
+  if (task?.uuid) return `TSK-${String(task.uuid).slice(0, 8).toUpperCase()}`;
+  return "-";
 }
 
 export default function TaskTable({ tasks }: { tasks: Task[] }) {
-  const [openDetail, setOpenDetail] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   if (!tasks.length) {
-    return (
-      <div className="py-10 text-center text-sm text-gray-500">
-        No tasks.
-      </div>
-    );
+    return <div className="py-10 text-center text-sm text-gray-500">No tasks.</div>;
   }
 
   function openTask(task: Task) {
     setSelectedTask(task);
-    setOpenDetail(true);
   }
 
   function closeTask() {
-    setOpenDetail(false);
     setSelectedTask(null);
   }
 
@@ -57,7 +53,7 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
           <tbody>
             {tasks.map((task) => (
               <tr
-                key={task.id}
+                key={(task as any).uuid}
                 className="border-b last:border-0 hover:bg-gray-50 transition"
               >
                 {/* ID */}
@@ -65,7 +61,7 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
                   className="px-4 py-3 text-blue-600 font-medium cursor-pointer hover:underline"
                   onClick={() => openTask(task)}
                 >
-                  {formatTaskCode(task.id)}
+                  {displayTaskCode(task)}
                 </td>
 
                 {/* TITLE */}
@@ -73,24 +69,11 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
                   className="px-4 py-3 align-top cursor-pointer"
                   onClick={() => openTask(task)}
                 >
-                  <div className="font-medium text-gray-900">
-                    {task.title}
-                  </div>
-                  {/* {task.description ? (
-                    <div className="mt-1 text-xs text-gray-500 line-clamp-2">
-                      {task.description}
-                    </div>
-                  ) : (
-                    <div className="mt-1 text-xs text-gray-400">
-                      No description
-                    </div>
-                  )} */}
+                  <div className="font-medium text-gray-900">{task.title}</div>
                 </td>
 
                 {/* DESCRIPTION */}
-                <td className="px-4 py-3 align-top">
-                  {task.description || "-"}
-                </td>
+                <td className="px-4 py-3 align-top">{task.description || "-"}</td>
 
                 {/* STATUS */}
                 <td className="px-4 py-3 align-top">
@@ -104,17 +87,17 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
 
                 {/* UPDATED AT */}
                 <td className="px-4 py-3 text-xs text-gray-600">
-                  {formatDate(task.updated_at)}
+                  {formatDate((task as any).updated_at)}
                 </td>
 
                 {/* CREATED AT */}
                 <td className="px-4 py-3 text-xs text-gray-600">
-                  {formatDate(task.created_at)}
+                  {formatDate((task as any).created_at)}
                 </td>
 
                 {/* CREATED BY */}
                 <td className="px-4 py-3 text-sm text-gray-700">
-                  {task.creator?.name ?? "-"}
+                  {(task as any).creator?.name ?? "-"}
                 </td>
 
                 {/* ACTION */}
@@ -134,12 +117,7 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
       </div>
 
       {/* DETAIL MODAL */}
-     {selectedTask && (
-  <TaskDetailModal
-    task={selectedTask}
-    onClose={closeTask}
-  />
-)}
+      {selectedTask && <TaskDetailModal task={selectedTask} onClose={closeTask} />}
     </>
   );
 }

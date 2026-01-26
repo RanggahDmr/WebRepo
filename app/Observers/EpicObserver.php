@@ -9,7 +9,7 @@ class EpicObserver
     public function created(Epic $epic): void
     {
         log_activity($epic, 'created', [
-            'after' => $epic->only(['create_work', 'status']),
+            'after' => $epic->only(['title', 'status']),
         ]);
     }
 

@@ -63,7 +63,7 @@ export default function Show({
         </div>
       }
     >
-      <Head title={`Stories - Epic #${epic.id}`} />
+      <Head title={`Stories - Epic #${epic.uuid}`} />
 
       <div className="space-y-4">
         <EpicSummary epic={epic} />
@@ -107,7 +107,7 @@ export default function Show({
       </div>
 
       <StoryCreateModal
-        epicCode={epic.code}
+        epicUuid={epic.uuid}
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />

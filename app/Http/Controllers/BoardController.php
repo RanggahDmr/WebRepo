@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Board;
-use App\Models\Epic;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -14,7 +13,7 @@ class BoardController extends Controller
     {
         $boards = Board::query()
             ->latest('updated_at')
-            ->get(['id','squad','title','created_by','created_at','updated_at']);
+            ->get(['uuid','squad_code','title','created_by','created_at','updated_at']);
 
         return Inertia::render('Boards/Index', [
             'boards' => $boards,
@@ -23,32 +22,25 @@ class BoardController extends Controller
 
     public function show(Board $board)
     {
-        $epics = Epic::query()
-            ->where('board_id', $board->id)
-            ->latest('updated_at')
-            ->get();
-
         return redirect()->route('epics.index', $board);
-        
     }
 
     public function store(Request $request)
-{
-    abort_unless($request->user()?->role === 'PM', 403);
+    {
+        abort_unless($request->user()?->role === 'PM', 403);
 
-    $data = $request->validate([
-        'title' => ['required','string','max:120'],
-        'squad' => (string) Str::uuid(),
-    ]);
+        $data = $request->validate([
+            'title' => ['required','string','max:120'],
+            'squad_code' => ['nullable','string','max:50'], // optional input
+        ]);
 
-    
+        Board::create([
+            'uuid' => (string) Str::uuid(),
+            'squad_code' => $data['squad_code'] ?? null,
+            'title' => $data['title'],
+            'created_by' => $request->user()->id,
+        ]);
 
-    Board::create([
-        'squad' => $code,
-        'title' => $data['title'],
-        'created_by' => $request->user()->id,
-    ]);
-
-    return back()->with('success', 'Board created.');
-}
+        return back()->with('success', 'Board created.');
+    }
 }

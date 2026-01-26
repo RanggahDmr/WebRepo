@@ -43,7 +43,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
           .filter(e => e.code)
           .map((e) => (
             <tr
-              key={e.id}
+              key={e.uuid}
               className="border-b last:border-0 hover:bg-gray-50 transition"
             ><td className="px-4 py-3 font-medium text-blue-600">
               <button
@@ -62,11 +62,11 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
               <td className="px-4 py-3 font-medium text-gray-900">
                 {isPM ? (
                   <EpicInlineTitle
-                    epicCode={e.code}
-                    value={e.create_work}
+                    epicUuid={e.uuid}
+                    value={e.title}
                   />
                 ) : (
-                  e.create_work
+                  e.title
                 )}
               </td>
 
@@ -74,7 +74,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
               <td className="px-4 py-3">
                 {isPM ? (
                   <EpicInlineSelect
-                    epicCode={e.code}
+                    epicUuid={e.uuid}
                     field="priority"
                     value={e.priority}
                     options={[
@@ -92,7 +92,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
               <td className="px-4 py-3">
                 {isPM ? (
                   <EpicInlineSelect
-                    epicCode={e.code}
+                    epicUuid={e.uuid}
                     field="status"
                     value={e.status}
                     options={[
@@ -123,7 +123,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
                 <button
                 type="button"
                 onClick={() =>
-                  (window.location.href = route("epics.show", { epic: e.code }))
+                  (window.location.href = route("epics.show", { epic: e.uuid }))
                 }
                 className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium
                           text-white bg-black hover:bg-gray-800 transition"
