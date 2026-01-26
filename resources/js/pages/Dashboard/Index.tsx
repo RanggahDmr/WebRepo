@@ -48,7 +48,7 @@ export default function Dashboard({ epics, board }: { board: Board; epics: Epic[
           {board.title}
         </div>
         <div className="mt-1 text-sm text-gray-500">
-          Squad: <span className="font-mono  text-gray-700">{board.squad}</span>
+          Squad: <span className="font-mono  text-gray-700">{board.uuid}</span>
         </div>
 
         <div className="mt-4 text-sm text-gray-600">

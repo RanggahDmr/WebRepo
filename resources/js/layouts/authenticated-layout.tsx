@@ -27,7 +27,12 @@ export default function AuthenticatedLayout({
     route().current("stories.show") ||
     route().current("tasks.index");
 
-  const historyActive = route().current("history.index");
+    
+
+  const historyActive =
+  route().current("history.index")||
+  route().current("monitoring.epics") ||
+  route().current("monitoring.stories");
   const monitoringActive = route().current("monitoring.index");
 
   const isPM = auth?.user?.role === "PM";
@@ -91,7 +96,7 @@ export default function AuthenticatedLayout({
                     {/* Dropdown items */}
                     {boardOpen && (
                       <div className="mt-1 ml-2 flex flex-col gap-1">
-                        <Link
+                        {/* <Link
                           href={route("dashboard")}
                           className={`rounded-md px-3 py-2 text-sm transition
                             ${
@@ -101,7 +106,7 @@ export default function AuthenticatedLayout({
                             }`}
                         >
                           All Boards
-                        </Link>
+                        </Link> */}
 
                         {(navBoards ?? []).map((b: any) => {
                           const uuid = b.uuid ?? null;
@@ -122,7 +127,7 @@ export default function AuthenticatedLayout({
                             >
                               <div className="font-medium">{b.title}</div>
                               <div className="text-xs text-gray-500 truncate">
-                                {squadCode ?? "-"}
+                                {uuid ?? "-"}
                               </div>
                             </Link>
                           );
