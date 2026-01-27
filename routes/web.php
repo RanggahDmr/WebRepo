@@ -69,6 +69,11 @@ Route::middleware('auth')->group(function () {
     //boards
     
     Route::get('/boards/{board}', [BoardController::class, 'show'])->name('boards.show'); // redirect aja
+    Route::post('/boards/{board}/members', [\App\Http\Controllers\BoardMemberController::class, 'store'])
+    ->name('boards.members.store');
+
+    Route::delete('/boards/{board}/members/{user}', [\App\Http\Controllers\BoardMemberController::class, 'destroy'])
+    ->name('boards.members.destroy');
 
 
     // create board (PM only)

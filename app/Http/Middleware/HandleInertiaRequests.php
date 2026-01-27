@@ -28,12 +28,17 @@ class HandleInertiaRequests extends Middleware
             ],
 
             // buat dropdown sidebar
-            'navBoards' => fn () => $request->user()
-                ? Board::query()
-                    ->select('uuid', 'squad_code', 'title')
-                    ->latest('updated_at')
-                    ->get()
-                : [],
+         'navBoards' => fn () => $request->user()
+    ? (
+        $request->user()->role === 'PM'
+            ? \App\Models\Board::query()->latest('updated_at')->get(['uuid','squad_code','title'])
+            : \App\Models\Board::query()
+                ->whereHas('members', fn ($q) => $q->where('users.id', $request->user()->id))
+                ->latest('updated_at')
+                ->get(['uuid','squad_code','title'])
+      )
+    : [],
+
         ]);
     }
 }

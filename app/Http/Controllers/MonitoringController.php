@@ -33,11 +33,16 @@ class MonitoringController extends Controller
         if (!in_array($sort, $allowedSorts, true)) $sort = 'created_at';
 
         $base = Task::query()
-            ->when($request->role, fn($q, $role) =>
-                $q->whereHas('assignee', fn($qq) => $qq->where('role', $role))
-            )
-            ->when($request->status, fn($q, $status) => $q->where('status', $status))
-            ->when($request->priority, fn($q, $priority) => $q->where('priority', $priority));
+    // board filter via story -> epic -> board
+    ->when($request->board, function ($q, $boardUuid) {
+        $q->whereHas('story.epic', fn ($qq) => $qq->where('board_uuid', $boardUuid));
+    })
+    // epic filter via story
+    ->when($request->epic, fn ($q, $epicUuid) => $q->whereHas('story', fn ($qq) => $qq->where('epic_uuid', $epicUuid)))
+    // status/priority
+    ->when($request->status, fn ($q, $status) => $q->where('status', $status))
+    ->when($request->priority, fn ($q, $priority) => $q->where('priority', $priority));
+
 
         $tasks = (clone $base)
             ->with([
@@ -176,11 +181,9 @@ class MonitoringController extends Controller
         ->when($request->board, fn ($q, $boardUuid) => $q->where('board_uuid', $boardUuid))
         // filter: status / priority
         ->when($request->status, fn ($q, $status) => $q->where('status', $status))
-        ->when($request->priority, fn ($q, $priority) => $q->where('priority', $priority))
+        ->when($request->priority, fn ($q, $priority) => $q->where('priority', $priority));
         // filter: role (creator role)
-        ->when($request->role, function ($q, $role) {
-            $q->whereHas('creator', fn ($qq) => $qq->where('role', $role));
-        });
+       
 
     $epics = (clone $base)
         ->with([

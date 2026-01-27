@@ -6,23 +6,22 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
   public function up(): void
   {
-    Schema::create('boards', function (Blueprint $table) {
-      $table->id();
+   Schema::create('boards', function (Blueprint $table) {
+    $table->char('uuid', 36)->primary();
 
-      // squad = kode unik (UUID string)
-      $table->uuid('squad')->unique();
+    $table->string('squad_code')->nullable(); // optional, kalau ga dipakai aman
+    $table->string('title');
 
-      $table->string('title');
-
-      // creator
-      $table->foreignId('created_by')
+    $table->foreignId('created_by')
         ->constrained('users')
         ->cascadeOnDelete();
 
-      $table->timestamps();
+    $table->timestamps();
 
-      $table->index(['created_by']);
-    });
+    $table->index(['created_by']);
+});
+
+
   }
 
   public function down(): void

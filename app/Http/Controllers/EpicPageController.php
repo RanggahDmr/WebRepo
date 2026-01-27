@@ -9,11 +9,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use App\Support\UniqueCode;
+
 
 class EpicPageController extends Controller
 {
     public function index(Board $board)
     {
+             abort_unless(
+    $board->members()->where('users.id', request()->user()->id)->exists(),
+    403
+);
         $epics = Epic::with('creator')
             ->where('board_uuid', $board->uuid)
             ->latest('updated_at')
@@ -35,6 +41,8 @@ class EpicPageController extends Controller
             'board' => $board->only(['uuid', 'squad_code', 'title', 'created_at']),
             'epics' => $epics,
         ]);
+   
+
     }
 
     public function show(Epic $epic)
@@ -92,7 +100,7 @@ class EpicPageController extends Controller
         Epic::create([
             'uuid' => (string) Str::uuid(),
             'board_uuid' => $board->uuid,
-            'code' => 'EP-' . strtoupper(Str::random(6)),
+            'code' => UniqueCode::epic(),
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             
@@ -147,7 +155,7 @@ class EpicPageController extends Controller
 
             Story::create([
                 'uuid' => (string) Str::uuid(),
-                'code' => 'ST-' . strtoupper(Str::random(6)),
+                'code' => UniqueCode::story(),
                 'epic_uuid' => $epic->uuid,
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,

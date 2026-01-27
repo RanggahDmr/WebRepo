@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Board;
 
 class User extends Authenticatable
 {
@@ -46,4 +47,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function boards()
+{
+    return $this->belongsToMany(
+        Board::class,
+        'board_members',
+        'user_id',    // pivot column yg nyimpan user id
+        'board_uuid'  // pivot column yg nyimpan board uuid
+    )->withTimestamps();
+}
+
 }

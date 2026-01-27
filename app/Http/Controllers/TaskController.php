@@ -6,6 +6,8 @@ use App\Models\Story;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Support\UniqueCode;
+
 
 class TaskController extends Controller
 {
@@ -70,7 +72,7 @@ class TaskController extends Controller
 
         $story->tasks()->create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'code' => 'TS-' . strtoupper(\Illuminate\Support\Str::random(6)),
+            'code' => UniqueCode::task(),
             'priority' => $validated['priority'],
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
