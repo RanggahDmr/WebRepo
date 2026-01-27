@@ -12,19 +12,31 @@ import ProgressBarEpic from "@/components/Monitoring/ProgressBarEpic";
 import MonitoringTable from "@/components/Monitoring/MonitoringTable";
 import TaskDetailCard from "@/components/Monitoring/TaskDetailCard";
 
-import Badge from "@/components/ui/Badge";
-import formatDateTime from "@/lib/date";
-
-import { DndContext } from "@dnd-kit/core";
-import { useTaskDnD } from "@/hooks/useTaskDnD";
-import TaskColumn from "../Tasks/TaskColumn";
-
 import StoryDetailCard from "@/components/Monitoring/StoryDetailCard";
 import EpicDetailCard from "@/components/Monitoring/EpicDetailCard";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-
+import Badge from "@/components/ui/Badge";
+import formatDateTime from "@/lib/date";
 import Breadcrumbs from "@/components/Breadcrumbs";
+
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import { useTaskDnD } from "@/hooks/useTaskDnD";
+import TaskColumn from "../Tasks/TaskColumn";
+
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const STATUSES = [
   { key: "TODO", label: "TODO" },
@@ -35,18 +47,115 @@ const STATUSES = [
 
 type TabKey = "tasks" | "stories" | "epics";
 
+/** --- Small DnD card for Story/Epic (same look) --- */
+function MiniDnDCard({
+  item,
+  canDrag,
+  onOpen,
+  kind,
+}: {
+  item: any;
+  canDrag: boolean;
+  onOpen: (x: any) => void;
+  kind: "story" | "epic";
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({
+      id: item.uuid,
+      disabled: !canDrag,
+    });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      type="button"
+      onClick={() => onOpen(item)}
+      className={[
+        "w-full text-left rounded-lg border bg-white p-3 shadow-sm hover:bg-gray-50",
+        isDragging ? "opacity-70" : "",
+      ].join(" ")}
+      {...attributes}
+      {...listeners}
+      title={kind === "story" ? "Open story" : "Open epic"}
+    >
+      <div className="text-xs font-medium text-gray-500">{item.code ?? "-"}</div>
+      <div className="mt-1 text-sm font-semibold text-gray-900 break-words">
+        {item.title ?? "-"}
+      </div>
+
+      {/* <div className="mt-2 flex gap-2 flex-wrap">
+        {item.priority ? <Badge variant={item.priority}>{item.priority}</Badge> : null}
+        {item.status ? <Badge variant={item.status}>{item.status}</Badge> : null}
+      </div> */}
+    </button>
+  );
+}
+
+/** --- Column wrapper that makes over.id = status --- */
+function MiniDnDColumn({
+  status,
+  title,
+  items,
+  canDrag,
+  onOpen,
+  kind,
+}: {
+  status: string;
+  title: string;
+  items: any[];
+  canDrag: boolean;
+  onOpen: (x: any) => void;
+  kind: "story" | "epic";
+}) {
+  return (
+    <div className="flex flex-col rounded-xl bg-gray-50 border border-gray-200 p-3">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-gray-600">{title}</h3>
+        <span className="text-xs text-gray-400">{items.length}</span>
+      </div>
+
+      {/* IMPORTANT: droppable target is this status string */}
+      <SortableContext
+        items={items.map((x) => x.uuid)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div
+          id={status}
+          className="flex flex-col gap-3 min-h-[40px]"
+          // NOTE: DndKit uses "over.id" from the element under pointer.
+          // We rely on the wrapping element having id=status and children being sortable items.
+        >
+          {items.map((x) => (
+            <MiniDnDCard
+              key={x.uuid}
+              item={x}
+              canDrag={canDrag}
+              onOpen={onOpen}
+              kind={kind}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
 export default function MonitoringIndex() {
   const {
     tab = "tasks",
     auth,
-    filters,
-    roles,
+    filters = {},
+    roles = [],
 
-    // tasks
+    // tab payloads (only one may exist depending on tab)
     tasks,
-    // stories
     stories,
-    // epics
     epics,
 
     // shared
@@ -55,15 +164,15 @@ export default function MonitoringIndex() {
     epicsOptions,
   }: any = usePage().props;
 
-  const crumbs = [
-    { label: "Monitoring", href: route("monitoring.index", { tab: "tasks" }) },
-  {  label: tab === "tasks" ? "Tasks" : tab === "stories" ? "Stories" : "Epics" },
-
-  ]
-
   const currentTab: TabKey = tab;
 
-  // ===== helpers =====
+  const crumbs = [
+    { label: "Monitoring", href: route("monitoring.index", { tab: "tasks" }) },
+    { label: currentTab === "tasks" ? "Tasks" : currentTab === "stories" ? "Stories" : "Epics" },
+  ];
+
+  const canDrag = ["PROGRAMMER", "PM", "SAD"].includes(auth?.user?.role);
+
   function applyFilter(key: string, value: string) {
     router.get(
       route("monitoring.index"),
@@ -72,9 +181,9 @@ export default function MonitoringIndex() {
     );
   }
 
-  // =========================
-  // TAB: TASKS (DnD + sidebar)
-  // =========================
+  /** =========================================================
+   *  TASKS TAB (DnD + sidebar) — keep your existing behavior
+   *  ========================================================= */
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [taskSidebarOpen, setTaskSidebarOpen] = useState(false);
 
@@ -87,16 +196,19 @@ export default function MonitoringIndex() {
     lastServerTasksRef.current = tasks?.data ?? [];
   }, [currentTab, tasks?.data]);
 
-  const { sensors, handleDragEnd } = useTaskDnD(auth?.user?.role, {
-    optimisticUpdate: (taskUuid, toStatus) => {
-      setTaskItems((prev) =>
-        prev.map((t) => (t.uuid === taskUuid ? { ...t, status: toStatus } : t))
-      );
-    },
-    rollback: () => setTaskItems(lastServerTasksRef.current),
-  });
+  const { sensors: taskSensors, handleDragEnd: handleTaskDragEnd } = useTaskDnD(
+    auth?.user?.role,
+    {
+      optimisticUpdate: (taskUuid, toStatus) => {
+        setTaskItems((prev) =>
+          prev.map((t) => (t.uuid === taskUuid ? { ...t, status: toStatus } : t))
+        );
+      },
+      rollback: () => setTaskItems(lastServerTasksRef.current),
+    }
+  );
 
-  const grouped = useMemo(() => {
+  const groupedTasks = useMemo(() => {
     return STATUSES.reduce((acc: any, s) => {
       acc[s.key] = taskItems.filter((t) => t.status === s.key);
       return acc;
@@ -108,51 +220,121 @@ export default function MonitoringIndex() {
     setTaskSidebarOpen(true);
   };
 
-  // =========================
-  // TAB: STORIES (sidebar)
-  // =========================
-  const storyItems = stories?.data ?? stories ?? [];
+  /** =========================================================
+   *  STORIES TAB (DnD + sidebar)
+   *  ========================================================= */
+  const serverStories = stories?.data ?? stories ?? [];
   const [selectedStory, setSelectedStory] = useState<any | null>(null);
   const [storySidebarOpen, setStorySidebarOpen] = useState(false);
 
+  const [storyItems, setStoryItems] = useState<any[]>(serverStories);
+  const lastServerStoriesRef = useRef<any[]>(serverStories);
+
   useEffect(() => {
     if (currentTab !== "stories") return;
-    if (!selectedStory) return;
-    const exists = (storyItems ?? []).some((s: any) => s.uuid === selectedStory.uuid);
-    if (!exists) {
-      setSelectedStory(null);
-      setStorySidebarOpen(false);
-    }
-  }, [currentTab, storyItems, selectedStory]);
+    setStoryItems(serverStories);
+    lastServerStoriesRef.current = serverStories;
+  }, [currentTab, serverStories]);
 
   const openStory = (story: any) => {
     setSelectedStory(story);
     setStorySidebarOpen(true);
   };
 
-  // =========================
-  // TAB: EPICS (sidebar)
-  // =========================
-  const epicItems = epics?.data ?? epics ?? [];
+  const groupedStories = useMemo(() => {
+    return STATUSES.reduce((acc: any, s) => {
+      acc[s.key] = storyItems.filter((x) => x.status === s.key);
+      return acc;
+    }, {});
+  }, [storyItems]);
+
+  /** =========================================================
+   *  EPICS TAB (DnD + sidebar)
+   *  ========================================================= */
+  const serverEpics = epics?.data ?? epics ?? [];
   const [selectedEpic, setSelectedEpic] = useState<any | null>(null);
   const [epicSidebarOpen, setEpicSidebarOpen] = useState(false);
 
+  const [epicItems, setEpicItems] = useState<any[]>(serverEpics);
+  const lastServerEpicsRef = useRef<any[]>(serverEpics);
+
   useEffect(() => {
     if (currentTab !== "epics") return;
-    if (!selectedEpic) return;
-    const exists = (epicItems ?? []).some((e: any) => e.uuid === selectedEpic.uuid);
-    if (!exists) {
-      setSelectedEpic(null);
-      setEpicSidebarOpen(false);
-    }
-  }, [currentTab, epicItems, selectedEpic]);
+    setEpicItems(serverEpics);
+    lastServerEpicsRef.current = serverEpics;
+  }, [currentTab, serverEpics]);
 
   const openEpic = (epic: any) => {
     setSelectedEpic(epic);
     setEpicSidebarOpen(true);
   };
 
-  // ===== Layout sidebar switch =====
+  const groupedEpics = useMemo(() => {
+    return STATUSES.reduce((acc: any, s) => {
+      acc[s.key] = epicItems.filter((x) => x.status === s.key);
+      return acc;
+    }, {});
+  }, [epicItems]);
+
+  /** =========================================================
+   *  Sensors for Stories/Epics DnD
+   *  ========================================================= */
+  const genericSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  function handleStoryDragEnd(event: DragEndEvent) {
+    if (!canDrag) return;
+
+    const storyUuid = String(event.active?.id ?? "");
+    const toStatus = String(event.over?.id ?? ""); // we want status here
+
+    if (!storyUuid || !toStatus) return;
+
+    // if user drops on a card, over.id becomes uuid (NOT status) => ignore
+    if (!STATUSES.some((s) => s.key === toStatus)) return;
+
+    // optimistic
+    setStoryItems((prev) =>
+      prev.map((s) => (s.uuid === storyUuid ? { ...s, status: toStatus } : s))
+    );
+
+    router.patch(
+      route("stories.update", { story: storyUuid }),
+      { status: toStatus },
+      {
+        preserveScroll: true,
+        onError: () => setStoryItems(lastServerStoriesRef.current),
+      }
+    );
+  }
+
+  function handleEpicDragEnd(event: DragEndEvent) {
+    if (!canDrag) return;
+
+    const epicUuid = String(event.active?.id ?? "");
+    const toStatus = String(event.over?.id ?? "");
+
+    if (!epicUuid || !toStatus) return;
+    if (!STATUSES.some((s) => s.key === toStatus)) return;
+
+    setEpicItems((prev) =>
+      prev.map((e) => (e.uuid === epicUuid ? { ...e, status: toStatus } : e))
+    );
+
+    router.patch(
+      route("epics.update", { epic: epicUuid }),
+      { status: toStatus },
+      {
+        preserveScroll: true,
+        onError: () => setEpicItems(lastServerEpicsRef.current),
+      }
+    );
+  }
+
+  /** =========================================================
+   *  Sidebar per tab
+   *  ========================================================= */
   const rightSidebarOpen =
     currentTab === "tasks"
       ? taskSidebarOpen
@@ -191,7 +373,6 @@ export default function MonitoringIndex() {
       />
     ) : null;
 
-  // ===== Header title =====
   const headerTitle =
     currentTab === "tasks"
       ? "Monitoring Tasks"
@@ -204,12 +385,14 @@ export default function MonitoringIndex() {
       header={<h1 className="text-xl font-semibold">{headerTitle}</h1>}
       rightSidebarOpen={rightSidebarOpen}
       rightSidebar={rightSidebar}
-    ><Breadcrumbs items={crumbs} />
-    <div className="mt-3">
-      <MonitoringDropdown current={tab} carry={["board", "epic"]} />
-    </div>
+    >
+      <Breadcrumbs items={crumbs} />
 
-      {/* Progress bar per tab */}
+      <div className="mt-3">
+        <MonitoringDropdown current={currentTab} carry={["board", "epic"]} />
+      </div>
+
+      {/* Progress per tab */}
       {currentTab === "tasks" ? (
         <ProgressBar progress={progress} />
       ) : currentTab === "stories" ? (
@@ -220,7 +403,7 @@ export default function MonitoringIndex() {
 
       {/* FILTER BAR */}
       <div className="bg-white p-4 rounded-lg shadow mb-4 flex gap-4 flex-wrap">
-        {/* board filter (stories/epics) */}
+        {/* Board (stories/epics) */}
         {currentTab !== "tasks" ? (
           <select
             value={filters.board || ""}
@@ -236,7 +419,7 @@ export default function MonitoringIndex() {
           </select>
         ) : null}
 
-        {/* epic filter (stories only) */}
+        {/* Epic (stories only) */}
         {currentTab === "stories" ? (
           <select
             value={filters.epic || ""}
@@ -252,8 +435,8 @@ export default function MonitoringIndex() {
           </select>
         ) : null}
 
-        {/* role (tasks = assignee, stories/epics = creator) */}
-        {/* <select
+        {/* Role (optional) */}
+        <select
           value={filters.role || ""}
           onChange={(e) => applyFilter("role", e.target.value)}
           className="border rounded px-2 py-1"
@@ -264,7 +447,7 @@ export default function MonitoringIndex() {
               {r}
             </option>
           ))}
-        </select> */}
+        </select>
 
         <select
           value={filters.status || ""}
@@ -311,7 +494,6 @@ export default function MonitoringIndex() {
 
       {currentTab === "tasks" ? (
         <>
-          {/* TABLE */}
           <MonitoringTable
             tasks={taskItems}
             selectedTaskUuid={selectedTask?.uuid ?? null}
@@ -320,9 +502,9 @@ export default function MonitoringIndex() {
 
           {tasks?.links ? <Pagination links={tasks.links} /> : null}
 
-          {/* KANBAN (DnD) */}
+          {/* KANBAN TASKS (DnD) */}
           <div className="mt-8">
-            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <DndContext sensors={taskSensors} onDragEnd={handleTaskDragEnd}>
               <div className="grid grid-cols-4 gap-5">
                 {STATUSES.map((s) => (
                   <div
@@ -334,14 +516,14 @@ export default function MonitoringIndex() {
                         {s.label}
                       </h3>
                       <span className="text-xs text-gray-400">
-                        {grouped[s.key]?.length ?? 0}
+                        {groupedTasks[s.key]?.length ?? 0}
                       </span>
                     </div>
 
                     <TaskColumn
                       status={s.key}
-                      tasks={grouped[s.key] ?? []}
-                      canDrag={["PROGRAMMER", "PM", "SAD"].includes(auth?.user?.role)}
+                      tasks={groupedTasks[s.key] ?? []}
+                      canDrag={canDrag}
                       onOpenTask={openTask}
                     />
                   </div>
@@ -352,6 +534,7 @@ export default function MonitoringIndex() {
         </>
       ) : currentTab === "stories" ? (
         <>
+          {/* TABLE STORIES */}
           <div className="bg-white rounded-lg shadow overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
@@ -413,7 +596,10 @@ export default function MonitoringIndex() {
 
                 {!storyItems.length && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
+                    <td
+                      colSpan={7}
+                      className="px-6 py-10 text-center text-sm text-gray-500"
+                    >
                       No stories.
                     </td>
                   </tr>
@@ -423,9 +609,29 @@ export default function MonitoringIndex() {
           </div>
 
           {stories?.links ? <Pagination links={stories.links} /> : null}
+
+          {/* KANBAN STORIES (DnD) */}
+          <div className="mt-8">
+            <DndContext sensors={genericSensors} onDragEnd={handleStoryDragEnd}>
+              <div className="grid grid-cols-4 gap-5">
+                {STATUSES.map((s) => (
+                  <MiniDnDColumn
+                    key={s.key}
+                    status={s.key}
+                    title={s.label}
+                    items={groupedStories[s.key] ?? []}
+                    canDrag={canDrag}
+                    onOpen={openStory}
+                    kind="story"
+                  />
+                ))}
+              </div>
+            </DndContext>
+          </div>
         </>
       ) : (
         <>
+          {/* TABLE EPICS */}
           <div className="bg-white rounded-lg shadow overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
@@ -487,7 +693,10 @@ export default function MonitoringIndex() {
 
                 {!epicItems.length && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
+                    <td
+                      colSpan={7}
+                      className="px-6 py-10 text-center text-sm text-gray-500"
+                    >
                       No epics.
                     </td>
                   </tr>
@@ -497,6 +706,25 @@ export default function MonitoringIndex() {
           </div>
 
           {epics?.links ? <Pagination links={epics.links} /> : null}
+
+          {/* KANBAN EPICS (DnD) */}
+          <div className="mt-8">
+            <DndContext sensors={genericSensors} onDragEnd={handleEpicDragEnd}>
+              <div className="grid grid-cols-4 gap-5">
+                {STATUSES.map((s) => (
+                  <MiniDnDColumn
+                    key={s.key}
+                    status={s.key}
+                    title={s.label}
+                    items={groupedEpics[s.key] ?? []}
+                    canDrag={canDrag}
+                    onOpen={openEpic}
+                    kind="epic"
+                  />
+                ))}
+              </div>
+            </DndContext>
+          </div>
         </>
       )}
     </AuthenticatedLayout>
