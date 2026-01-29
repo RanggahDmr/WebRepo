@@ -31,7 +31,7 @@ export default function Show({
           </div>
 
           <Link
-            href={route("boards.index")}
+            href={route("dashboard")}
             className="text-sm text-gray-600 hover:text-gray-900 hover:underline"
           >
             ← Back to Boards

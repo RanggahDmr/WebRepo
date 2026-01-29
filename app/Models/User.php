@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Board;
+ use App\Models\Role;
 
 class User extends Authenticatable
 {
+    
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
@@ -56,5 +58,24 @@ class User extends Authenticatable
         'board_uuid'  // pivot column yg nyimpan board uuid
     )->withTimestamps();
 }
+   
+
+public function roles()
+{
+    return $this->belongsToMany(Role::class, 'user_roles')->withTimestamps();
+}
+
+public function hasRole(string $slug): bool
+{
+    return $this->roles()->where('slug', $slug)->exists();
+}
+
+public function hasPermission(string $key): bool
+{
+    return $this->roles()
+        ->whereHas('permissions', fn ($q) => $q->where('key', $key))
+        ->exists();
+}
+
 
 }

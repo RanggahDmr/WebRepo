@@ -1,24 +1,30 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\EpicPageController;
+
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\TaskController;
+
+use App\Http\Controllers\BoardController;
+use App\Http\Controllers\BoardMemberController;
+
+use App\Http\Controllers\EpicPageController;
 use App\Http\Controllers\StoryController;
+use App\Http\Controllers\TaskController;
+
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\MonitoringController;
-use App\Http\Controllers\BoardController;
-use App\Http\Controllers\BoardMonitoringController;
 
+use App\Http\Controllers\UserRoleController;
+
+use App\Http\Controllers\RoleController;
 
 
 Route::get('/', fn () => redirect()->route('dashboard'));
 
-
 /*
 |--------------------------------------------------------------------------
-| Guest
+| Guest (Login/Register)
 |--------------------------------------------------------------------------
 */
 Route::middleware('guest')->group(function () {
@@ -29,116 +35,138 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
 });
 
+
 /*
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------|
 | Authenticated
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------|
 */
 Route::middleware('auth')->group(function () {
-
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
-    // Dashboard
-    Route::get('/dashboard', [BoardController::class, 'index'])->name('dashboard');
+    /*
+    |--------------------------------------------------------------------------|
+    | Admin: Roles / Users (permission-based)
+    |--------------------------------------------------------------------------|
+    */
+    Route::middleware(['role.ready', 'perm:manage_roles'])->group(function () {
+        // users role assignment
+        Route::get('/admin/users', [UserRoleController::class, 'index'])
+            ->name('admin.users.index');
 
-    // Route::get('/dashboard', [EpicPageController::class, 'index'])
-    //     ->name('dashboard');
+        Route::patch('/admin/users/{user}/role', [UserRoleController::class, 'update'])
+            ->name('admin.users.role.update');
 
-    // Epic & Story view (read-only)
-    Route::get('/epics/{epic}', [EpicPageController::class, 'show'])
-        ->name('epics.show');
+        Route::delete('/admin/users/{user}', [UserRoleController::class, 'destroy'])
+            ->name('admin.users.destroy');
 
-    Route::get('/stories/{story}', [StoryController::class, 'show'])
-        ->name('stories.show');
+        // roles CRUD
+        Route::get('/admin/roles', [RoleController::class, 'index'])
+            ->name('admin.roles.index');
 
-    // History
-    Route::get('/history', [HistoryController::class, 'index'])
-        ->name('history.index');
+        Route::post('/admin/roles', [RoleController::class, 'store'])
+            ->name('admin.roles.store');
 
-    //Monitoring
-    Route::get('/monitoring', [MonitoringController::class, 'index'])
-    ->name('monitoring.index');
-     Route::get('/monitoring/tasks',   [MonitoringController::class, 'tasks'])->name('monitoring.tasks');
-     Route::get('/monitoring', [\App\Http\Controllers\MonitoringController::class, 'index'])
-    ->name('monitoring.index');
+        Route::patch('/admin/roles/{role}', [RoleController::class, 'update'])
+            ->name('admin.roles.update');
 
-    // Route::get('/monitoring/epics',   [MonitoringController::class, 'epics'])->name('monitoring.epics');
-    // Route::get('/monitoring/stories', [MonitoringController::class, 'stories'])->name('monitoring.stories');
+        Route::delete('/admin/roles/{role}', [RoleController::class, 'destroy'])
+            ->name('admin.roles.destroy');
 
+        // optional: khusus save checklist permission
+        Route::patch('/admin/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])
+            ->name('admin.roles.permissions.sync');
+    });
 
-    //boards
-    
-    Route::get('/boards/{board}', [BoardController::class, 'show'])->name('boards.show'); // redirect aja
-    Route::post('/boards/{board}/members', [\App\Http\Controllers\BoardMemberController::class, 'store'])
-    ->name('boards.members.store');
+    /*
+    |--------------------------------------------------------------------------|
+    | App Routes (wajib role)
+    |--------------------------------------------------------------------------|
+    */
+    Route::middleware('role.ready')->group(function () {
+        Route::get('/dashboard', [BoardController::class, 'index'])->name('dashboard');
 
-    Route::delete('/boards/{board}/members/{user}', [\App\Http\Controllers\BoardMemberController::class, 'destroy'])
-    ->name('boards.members.destroy');
+        Route::post('/boards', [BoardController::class, 'store'])
+            ->middleware('perm:manage_boards')
+            ->name('boards.store');
 
+        Route::get('/boards/{board}', [BoardController::class, 'show'])->name('boards.show');
 
-    // create board (PM only)
-    Route::post('/boards', [BoardController::class, 'store'])->name('boards.store');
-    Route::get('/boards/{board}/epics', [EpicPageController::class, 'index'])
-    ->name('epics.index');
+        Route::post('/boards/{board}/members', [BoardMemberController::class, 'store'])
+            ->middleware('perm:manage_members')
+            ->name('boards.members.store');
 
+        Route::delete('/boards/{board}/members/{user}', [BoardMemberController::class, 'destroy'])
+            ->middleware('perm:manage_members')
+            ->name('boards.members.destroy');
 
+        Route::get('/boards/{board}/epics', [EpicPageController::class, 'index'])->name('epics.index');
+        Route::get('/epics/{epic}', [EpicPageController::class, 'show'])->name('epics.show');
 
-    // Task board
-    Route::get('/stories/{story}/tasks', [TaskController::class, 'index'])
-        ->name('tasks.index');
+        Route::get('/stories/{story}', [StoryController::class, 'show'])->name('stories.show');
 
-     Route::patch('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+        Route::get('/stories/{story}/tasks', [TaskController::class, 'index'])->name('tasks.index');
 
+        Route::patch('/tasks/{task}', [TaskController::class, 'update'])
+            ->middleware('perm:update_task')
+            ->name('tasks.update');
 
-   
-    Route::middleware('role:PM')->group(function () {
+        Route::get('/history', [HistoryController::class, 'index'])
+            ->middleware('perm:view_history')
+            ->name('history.index');
 
-        // Epic
-       
+        Route::get('/monitoring', [MonitoringController::class, 'index'])
+            ->middleware('perm:view_monitoring')
+            ->name('monitoring.index');
+
+        Route::get('/monitoring/tasks', [MonitoringController::class, 'tasks'])
+            ->middleware('perm:view_monitoring')
+            ->name('monitoring.tasks');
 
         Route::post('/boards/{board}/epics', [EpicPageController::class, 'store'])
-        ->name('epics.store');
-        
+            ->middleware('perm:create_epic')
+            ->name('epics.store');
+
         Route::patch('/epics/{epic}', [EpicPageController::class, 'update'])
+            ->middleware('perm:update_epic')
             ->name('epics.update');
 
-        // Story
+        Route::post('/epics/{epic}/stories', [EpicPageController::class, 'storeStory'])
+            ->middleware('perm:create_story')
+            ->name('stories.store');
+
         Route::patch('/stories/{story}', [EpicPageController::class, 'updateStory'])
+            ->middleware('perm:update_story')
             ->name('stories.update');
 
-           
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | PM + SAD (Story create)
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('role:PM,SAD')->group(function () {
-
-        Route::post('/epics/{epic}/stories', [EpicPageController::class, 'storeStory'])
-            ->name('stories.store');
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | PM + SAD + PROGRAMMER (Task create)
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('role:PM,SAD,PROGRAMMER')->group(function () {
-
         Route::post('/stories/{story}/tasks', [TaskController::class, 'store'])
+            ->middleware('perm:create_task')
             ->name('tasks.store');
-    });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Task update (DnD / status)
-    |--------------------------------------------------------------------------
-    */
-    Route::patch('/tasks/{task}', [TaskController::class, 'update'])
-        ->name('tasks.update');
+                    // Boards delete
+        Route::delete('/boards/{board}', [BoardController::class, 'destroy'])
+            ->middleware('perm:manage_boards')
+            ->name('boards.destroy');
 
+        // Epics delete
+        Route::delete('/epics/{epic}', [EpicPageController::class, 'destroy'])
+            ->middleware('perm:update_epic') // kalau belum punya delete_epic, sementara pakai ini
+            ->name('epics.destroy');
 
+        // Stories delete
+        Route::delete('/stories/{story}', [EpicPageController::class, 'destroyStory'])
+            ->middleware('perm:update_story') // sementara
+            ->name('stories.destroy');
 
-});
+        // Tasks delete
+        Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])
+            ->middleware('perm:update_task') // sementara
+            ->name('tasks.destroy');
+
+            });
+        Route::delete('/boards/{board}', [BoardController::class, 'destroy'])
+        ->middleware('perm:manage_boards')
+        ->name('boards.destroy');
+
+        });
+

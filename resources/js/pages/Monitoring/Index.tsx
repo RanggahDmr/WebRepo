@@ -483,7 +483,7 @@ export default function MonitoringIndex() {
           {tasks?.links ? <Pagination links={tasks.links} /> : null}
 
           <div className="mt-8">
-            <DndContext sensors={taskSensors} onDragEnd={handleTaskDragEnd}>
+            {/* <DndContext sensors={taskSensors} onDragEnd={handleTaskDragEnd}> */}
               <div className="grid grid-cols-4 gap-5">
                 {STATUSES.map((s) => (
                   <div
@@ -508,7 +508,7 @@ export default function MonitoringIndex() {
                   </div>
                 ))}
               </div>
-            </DndContext>
+            {/* </DndContext> */}
           </div>
         </>
       ) : currentTab === "stories" ? (
@@ -589,7 +589,7 @@ export default function MonitoringIndex() {
           {stories?.links ? <Pagination links={stories.links} /> : null}
 
           <div className="mt-8">
-            <DndContext sensors={genericSensors} onDragEnd={handleStoryDragEnd}>
+            {/* <DndContext sensors={genericSensors} onDragEnd={handleStoryDragEnd}> */}
               <div className="grid grid-cols-4 gap-5">
                 {STATUSES.map((s) => (
                   <MiniDnDColumn
@@ -603,7 +603,7 @@ export default function MonitoringIndex() {
                   />
                 ))}
               </div>
-            </DndContext>
+            {/* </DndContext> */}
           </div>
         </>
       ) : (
@@ -684,7 +684,7 @@ export default function MonitoringIndex() {
           {epics?.links ? <Pagination links={epics.links} /> : null}
 
           <div className="mt-8">
-            <DndContext sensors={genericSensors} onDragEnd={handleEpicDragEnd}>
+            {/* <DndContext sensors={genericSensors} onDragEnd={handleEpicDragEnd}> */}
               <div className="grid grid-cols-4 gap-5">
                 {STATUSES.map((s) => (
                   <MiniDnDColumn
@@ -698,7 +698,7 @@ export default function MonitoringIndex() {
                   />
                 ))}
               </div>
-            </DndContext>
+            {/* </DndContext> */}
           </div>
         </>
       )}

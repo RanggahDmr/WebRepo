@@ -9,17 +9,26 @@ import EpicTable from "@/components/epics/EpicTable";
 import EpicFilters from "@/components/epics/EpicFilter";
 import EpicCreateModal from "@/components/epics/EpicCreateModal";
 import formatDateTime from "@/lib/date";
+import { can } from "@/lib/can";
 
 type Board = {
   uuid: string;
-  squad: string;
+  squad_code?: string | null;
   title: string;
   created_at?: string;
 };
 
-export default function Dashboard({ epics, board }: { board: Board; epics: Epic[] }) {
+export default function Dashboard({
+  epics,
+  board,
+}: {
+  board: Board;
+  epics: Epic[];
+}) {
   const { auth }: any = usePage().props;
-  const isPM = auth?.user?.role === "PM";
+
+  // RBAC: create epic permission
+  const canCreateEpic = can(auth, "create_epic");
 
   const filter = useEpicFilters(epics);
   const [openCreate, setOpenCreate] = useState(false);
@@ -31,42 +40,54 @@ export default function Dashboard({ epics, board }: { board: Board; epics: Epic[
           <h2 className="text-2xl font-bold">Epics</h2>
           <Breadcrumbs
             items={[
-              { label: "Broads", href: route("dashboard") },
+              { label: "Boards", href: route("dashboard") },
               { label: "Epics" },
             ]}
           />
         </>
       }
     >
-      <Head title="Dashboard" />
-      <div className="mb-6 rounded-xl border border-gray-100 bg-white">
-  <div className="px-6 py-5">
-    {/* Title + UUID */}
-    <div className="flex items-start justify-between gap-6">
-      <div>
-        <div className="text-lg font-semibold text-gray-900">
-          {board.title}
-        </div>
-        <div className="mt-1 text-sm text-gray-500">
-          Squad: <span className="font-mono  text-gray-700">{board.uuid}</span>
-        </div>
+      <Head title="Epics" />
 
-        <div className="mt-4 text-sm text-gray-600">
-          Created:{" "}
-          {board.created_at ? formatDateTime(board.created_at) : "-"}
+      {/* Board Card */}
+      <div className="mb-6 rounded-xl border border-gray-100 bg-white">
+        <div className="px-6 py-5">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <div className="text-lg font-semibold text-gray-900">
+                {board.title}
+              </div>
+
+              <div className="mt-1 text-sm text-gray-500">
+                Board:{" "}
+                <span className="font-mono text-gray-700">{board.uuid}</span>
+              </div>
+
+              {board.squad_code ? (
+                <div className="mt-1 text-sm text-gray-500">
+                  Squad:{" "}
+                  <span className="font-mono text-gray-700">
+                    {board.squad_code}
+                  </span>
+                </div>
+              ) : null}
+
+              <div className="mt-4 text-sm text-gray-600">
+                Created: {board.created_at ? formatDateTime(board.created_at) : "-"}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-
+      {/* Epics section */}
       <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
         <div className="mb-6 flex justify-between items-center">
           <h3 className="text-lg font-semibold"></h3>
 
-          {isPM && (
+          {canCreateEpic && (
             <button
+              type="button"
               onClick={() => setOpenCreate(true)}
               className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900"
             >
@@ -90,7 +111,7 @@ export default function Dashboard({ epics, board }: { board: Board; epics: Epic[
         <EpicTable epics={filter.filtered} />
       </div>
 
-      {isPM && (
+      {canCreateEpic && (
         <EpicCreateModal
           board={board}
           open={openCreate}

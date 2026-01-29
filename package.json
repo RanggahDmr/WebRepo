@@ -33,6 +33,7 @@
         "@dnd-kit/sortable": "^10.0.0",
         "@dnd-kit/utilities": "^3.2.2",
         "@inertiajs/react": "^2.3.7",
+        "@radix-ui/react-alert-dialog": "^1.1.15",
         "@tailwindcss/vite": "^4.1.11",
         "@types/react": "^19.2.0",
         "@types/react-dom": "^19.2.0",

@@ -17,15 +17,33 @@ class LoginController extends Controller
     public function store(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required','email'],
+            'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
 
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
-            return back()->withErrors(['email' => 'Invalid credentials'])->onlyInput('email');
+            return back()
+                ->withErrors(['email' => 'Invalid credentials'])
+                ->onlyInput('email');
+        }
+
+        // ✅ cek role setelah login sukses, sebelum redirect
+        $user = Auth::user();
+        if (!$user?->role) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()
+                ->route('login')
+                ->with('alert', [
+                    'type' => 'error',
+                    'message' => 'Akun kamu belum di-assign role oleh PM. Hubungi PM untuk aktivasi.',
+                ]);
         }
 
         $request->session()->regenerate();
+
         return redirect()->route('dashboard');
     }
 

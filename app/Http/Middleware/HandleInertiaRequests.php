@@ -15,30 +15,48 @@ class HandleInertiaRequests extends Middleware
         return parent::version($request);
     }
 
-    public function share(Request $request): array
-    {
-        return array_merge(parent::share($request), [
-            'auth' => [
-                'user' => $request->user(),
-            ],
+   
+   public function share(Request $request): array
+{
+    $user = $request->user();
 
-            'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-            ],
+    return array_merge(parent::share($request), [
+        'auth' => [
+            'user' => $user ? $user->only(['id','name','email']) + [
+                // kirim roles & permissions keys supaya FE bisa hide/show menu
+                'roles' => $user->roles()->get(['roles.id','roles.name','roles.slug']),
 
-            // buat dropdown sidebar
-         'navBoards' => fn () => $request->user()
-    ? (
-        $request->user()->role === 'PM'
-            ? \App\Models\Board::query()->latest('updated_at')->get(['uuid','squad_code','title'])
-            : \App\Models\Board::query()
-                ->whereHas('members', fn ($q) => $q->where('users.id', $request->user()->id))
-                ->latest('updated_at')
-                ->get(['uuid','squad_code','title'])
-      )
-    : [],
+                'permissions' => $user->roles()
+    ->with('permissions:permissions.id,permissions.key')
+    ->get()
+    ->flatMap(fn ($r) => $r->permissions->pluck('key'))
+    ->unique()
+    ->values(),
 
-        ]);
-    }
+            ] : null,
+        ],
+
+        'flash' => [
+            'alert' => session('alert'),
+            'success' => fn () => $request->session()->get('success'),
+            'error'   => fn () => $request->session()->get('error'),
+        ],
+
+        // dropdown sidebar
+        'navBoards' => fn () => $user
+            ? (
+                // kalau punya permission manage_boards => boleh lihat semua board
+                $user->hasPermission('manage_boards')
+                    ? \App\Models\Board::query()
+                        ->latest('updated_at')
+                        ->get(['uuid','squad_code','title'])
+                    : \App\Models\Board::query()
+                        ->whereHas('members', fn ($q) => $q->where('users.id', $user->id))
+                        ->latest('updated_at')
+                        ->get(['uuid','squad_code','title'])
+            )
+            : [],
+    ]);
+}
+
 }

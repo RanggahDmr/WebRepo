@@ -4,6 +4,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
+import { AlertProvider } from "@/components/alert/AlertProvider";
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -21,10 +22,12 @@ createInertiaApp({
     root.render(
       <>
         {/* GLOBAL TOASTER */}
-        <Toaster position="top-right" />
+        <Toaster position='top-right' />
+        <AlertProvider>
 
         {/* INERTIA APP */}
         <App {...props} />
+        </AlertProvider>
       </>
     );
   },

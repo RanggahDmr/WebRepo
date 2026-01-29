@@ -12,6 +12,7 @@ import CreateTaskModal from "./CreateTaskModal";
 import TaskDetailModal from "./TaskDetailModal";
 
 import { Story } from "@/types/story";
+import { Epic } from "@/types/epic";
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
 type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
@@ -35,16 +36,19 @@ export type Task = {
   assignee?: { id: number; name: string; role?: string };
 
   story?: any;
+  epic?: any;
 };
 
 function TaskBoard({
   story,
   tasks,
+  epic,
 }: {
   story: Story;
   tasks: Task[];
+  epic: Epic;
 }) {
-  const { auth, epic }: any = usePage().props;
+  const { auth }: any = usePage().props;
 
   const role = auth?.user?.role;
   const canCreate = ["PM", "SAD"].includes(role);
@@ -90,7 +94,10 @@ function TaskBoard({
               Created: {story.created_at ? formatDateTime(story.created_at) : "-"}
             </div>
             <div className="mt-1 text-sm text-gray-600">
-              CreatedBy: {story.creator?.name ?? "-"}
+              StoryBy: {story.creator?.name ?? "-"}
+            </div>
+            <div className="mt-1 text-sm text-gray-600">
+              EpicBy: {epic.creator?.name ?? "-"}
             </div>
           </div>
         </div>

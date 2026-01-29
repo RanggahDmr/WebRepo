@@ -7,10 +7,13 @@ import EpicInlineTitle from "./EpicInlineTitle";
 import Badge from "@/components/ui/Badge";
 import { useState } from "react";
 import EpicDetailModal from "./EpicDetailModal";
+import { can } from "@/lib/can";
+import RowActions from "../RowActions";
+
 
 export default function EpicTable({ epics }: { epics: Epic[] }) {
   const { auth }: any = usePage().props;
-  const isPM = auth?.user?.role === "PM";
+  const canEditEpic = can(auth, "update_epic")
   const [open, setOpen] = useState(false);
   const [SelectedEpic, setSelectedEpic] = useState<any>(null);
 
@@ -60,7 +63,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
             </td>
             
               <td className="px-4 py-3 font-medium text-gray-900">
-                {isPM ? (
+                {canEditEpic ? (
                   <EpicInlineTitle
                     epicUuid={e.uuid}
                     value={e.title}
@@ -72,7 +75,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
 
               {/* PRIORITY (INLINE SELECT) */}
               <td className="px-4 py-3">
-                {isPM ? (
+                {canEditEpic ? (
                   <EpicInlineSelect
                     epicUuid={e.uuid}
                     field="priority"
@@ -90,7 +93,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
 
               {/* STATUS (INLINE SELECT) */}
               <td className="px-4 py-3">
-                {isPM ? (
+                {canEditEpic ? (
                   <EpicInlineSelect
                     epicUuid={e.uuid}
                     field="status"
@@ -118,24 +121,30 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
               </td>
 
               {/* ACTION */}
-              <td className="px-4 py-3 text-right space-x-3">
-                <div className="inline-flex items-center gap-2">
-                <button
-                type="button"
-                onClick={() =>
-                  (window.location.href = route("epics.show", { epic: e.uuid }))
-                }
-                className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium
-                          text-white bg-black hover:bg-gray-800 transition"
-              >
-                View
-              </button>
-              </div>
+            <td className="px-4 py-3 text-right">
+  {/* Kalau boleh edit epic, berarti boleh delete juga (sementara) */}
+  {canEditEpic ? (
+    <div className="flex justify-end">
+      <RowActions
+        viewHref={route("epics.show", { epic: e.uuid })}
+        destroyRouteName="epics.destroy"
+        destroyParam={{ epic: e.uuid }}
+        confirmTitle="Delete epic?"
+        confirmText={`Epic "${e.title}" akan dihapus permanen.`}
+      />
+    </div>
+  ) : (
+    <div className="flex justify-end">
+      <Link
+        href={route("epics.show", { epic: e.uuid })}
+        className="text-blue-600 hover:underline"
+      >
+        VIEW
+      </Link>
+    </div>
+  )}
+</td>
 
-  
-
-                
-              </td>
             </tr>
           ))}
         </tbody>

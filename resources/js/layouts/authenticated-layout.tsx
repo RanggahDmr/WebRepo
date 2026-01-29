@@ -1,8 +1,10 @@
-import { Link, usePage } from "@inertiajs/react";
+import { Link, usePage, router } from "@inertiajs/react";
 import { PropsWithChildren, ReactNode, useEffect, useState } from "react";
 import route from "@/lib/route";
 import FlashMessage from "@/components/ui/FlashMessage";
 import CreateBoardModal from "@/pages/Boards/CreateBoardModal";
+import { useAlert } from "@/components/alert/AlertProvider";
+import { can } from "@/lib/can";
 
 export default function AuthenticatedLayout({
   header,
@@ -16,28 +18,36 @@ export default function AuthenticatedLayout({
 }>) {
   const { auth, navBoards, board }: any = usePage().props;
 
+  const { alert, confirm } = useAlert();
+
   const dashboardActive = route().current("dashboard");
 
   const boardActive =
     route().current("dashboard") ||
-    route().current("boards.index") ||
+    route().current("dashboard") ||
     route().current("boards.show") ||
     route().current("epics.index") ||
     route().current("epics.show") ||
     route().current("stories.show") ||
     route().current("tasks.index");
 
-    
-
   const historyActive =
-  route().current("history.index")||
-  route().current("monitoring.epics") ||
-  route().current("monitoring.stories");
+    route().current("history.index") ||
+    route().current("monitoring.epics") ||
+    route().current("monitoring.stories");
+
+    const adminUsersActive = route().current("admin.users.index");
+const adminRolesActive = route().current("admin.roles.index");
+
+// kalau kamu mau parent "Admin" aktif ketika salah satu aktif
+const adminActive = adminUsersActive || adminRolesActive;
+
   const monitoringActive = route().current("monitoring.index");
 
-  const isPM = auth?.user?.role === "PM";
+ 
+const canManageBoards = can(auth, "manage_boards");
+const canManageRoles = can(auth, "manage_roles");
   const [openCreateBoard, setOpenCreateBoard] = useState(false);
-
   const [boardOpen, setBoardOpen] = useState<boolean>(!!boardActive);
 
   // current board uuid dari props (kalau halaman epics/show/story/tasks ngirim 'board')
@@ -46,6 +56,49 @@ export default function AuthenticatedLayout({
   useEffect(() => {
     if (boardActive) setBoardOpen(true);
   }, [boardActive]);
+
+  
+  useEffect(() => {
+    const handler = (event: any) => {
+      const status = event?.detail?.response?.status;
+
+      if (status === 401) {
+        alert({
+          title: "Unauthorized (401)",
+          description: "Sesi kamu mungkin habis. Silakan login ulang.",
+          confirmText: "OK",
+        });
+      }
+
+      if (status === 403) {
+        alert({
+          title: "Akses ditolak (403)",
+          description: "Kamu tidak punya izin untuk melakukan aksi ini.",
+          confirmText: "OK",
+        });
+      }
+
+      if (status === 419) {
+        alert({
+          title: "Sesi habis (419)",
+          description: "CSRF/session expired. Silakan refresh halaman.",
+          confirmText: "Refresh",
+          onConfirm: () => window.location.reload(),
+        });
+      }
+
+      if (typeof status === "number" && status >= 500) {
+        alert({
+          title: "Server error",
+          description: "Terjadi masalah di server. Coba lagi sebentar.",
+          confirmText: "OK",
+        });
+      }
+    };
+
+    document.addEventListener("inertia:exception", handler as any);
+    return () => document.removeEventListener("inertia:exception", handler as any);
+  }, [alert]);
 
   return (
     <div className="h-screen w-full bg-gray-100 flex flex-col overflow-hidden">
@@ -96,29 +149,18 @@ export default function AuthenticatedLayout({
                     {/* Dropdown items */}
                     {boardOpen && (
                       <div className="mt-1 ml-2 flex flex-col gap-1">
-                        {/* <Link
-                          href={route("dashboard")}
-                          className={`rounded-md px-3 py-2 text-sm transition
-                            ${
-                              dashboardActive
-                                ? "bg-gray-100 text-gray-900 font-medium"
-                                : "text-gray-600 hover:bg-gray-50"
-                            }`}
-                        >
-                          All Boards
-                        </Link> */}
-
                         {(navBoards ?? []).map((b: any) => {
                           const uuid = b.uuid ?? null;
                           const squadCode = b.squad_code ?? null;
-                          const isCurrent = !!currentBoardUuid && uuid === currentBoardUuid;
+                          const isCurrent =
+                            !!currentBoardUuid && uuid === currentBoardUuid;
 
                           return (
                             <Link
                               key={uuid}
                               href={route("epics.index", { board: uuid })}
                               className={[
-                                "rounded-md px-3 py-2 text-sm transition",
+                                "rounded-md px-3 py-2 text-sm transition ",
                                 isCurrent
                                   ? "bg-gray-100 text-gray-900 font-medium"
                                   : "hover:bg-gray-50 text-gray-700",
@@ -126,9 +168,9 @@ export default function AuthenticatedLayout({
                               title={squadCode ?? ""}
                             >
                               <div className="font-medium">{b.title}</div>
-                              <div className="text-xs text-gray-500 truncate">
+                              {/* <div className="text-xs text-gray-500 truncate">
                                 {uuid ?? "-"}
-                              </div>
+                              </div> */}
                             </Link>
                           );
                         })}
@@ -138,16 +180,16 @@ export default function AuthenticatedLayout({
                           <button
                             type="button"
                             onClick={() => setOpenCreateBoard(true)}
-                            disabled={!isPM}
+                            disabled={!canManageBoards}
                             className={`w-full rounded-md px-3 py-2 text-left text-sm transition flex items-center justify-between
                               ${
-                                isPM
+                                canManageBoards
                                   ? "text-gray-700 hover:bg-gray-50"
                                   : "text-gray-400 cursor-not-allowed"
                               }`}
-                            title={isPM ? "Create board" : "PM only"}
+                            title={canManageBoards ? "Create board" : "PM only"}
                           >
-                            <span>Add Squad</span>
+                            <span>Add Board</span>
                             <span className="text-lg leading-none">+</span>
                           </button>
                         </div>
@@ -185,19 +227,52 @@ export default function AuthenticatedLayout({
                   >
                     Monitoring
                   </Link>
+                     {can(auth, "manage_boards") && (
+                   <Link
+  href={route("admin.users.index")}
+  className={`rounded-md px-3 py-2 text-sm font-medium transition
+    ${
+      adminUsersActive
+        ? "bg-black text-white"
+        : "text-gray-700 hover:bg-gray-100"
+    }`}
+>
+  User Management
+</Link>
+                  )}
+                  {canManageRoles && (
+                 <Link
+  href={route("admin.roles.index")}
+  className={`rounded-md px-3 py-2 text-sm font-medium transition
+    ${
+      adminRolesActive
+        ? "bg-black text-white"
+        : "text-gray-700 hover:bg-gray-100"
+    }`}
+>
+  Roles
+</Link>
+                  )}
                 </nav>
-
-                {/* LOGOUT */}
+                   
+                
                 <div className="pt-4 border-t">
-                  <Link
-                    href={route("logout")}
-                    method="post"
-                    as="button"
+                  <button
+                    type="button"
+                    onClick={() =>
+                      confirm({
+                        title: "Logout?",
+                        description: " Are you sure want to logout??",
+                        confirmText: "Logout",
+                        cancelText: "Cancle",
+                        onConfirm: () => router.post(route("logout")),
+                      })
+                    }
                     className="w-full rounded-md px-3 py-2 text-left text-sm font-medium
                                text-red-600 hover:bg-red-50 transition"
                   >
                     Logout
-                  </Link>
+                  </button>
                 </div>
               </div>
             </aside>

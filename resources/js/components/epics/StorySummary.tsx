@@ -48,7 +48,11 @@ export default function StorySummary({ story }: { story: Story }) {
           </div>
         </div>
         <div>
-    Created by:{" "}
+    Epic by:{" "}
+    <span className="font-medium text-gray-900">
+      {story.creator?.name ?? "-"}
+    </span>
+    Story by:{" "}
     <span className="font-medium text-gray-900">
       {story.creator?.name ?? "-"}
     </span>

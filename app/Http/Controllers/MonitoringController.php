@@ -94,7 +94,7 @@ class MonitoringController extends Controller
         $epics = (clone $base)
             ->with(['board:uuid,title,squad_code', 'creator:id,name,role'])
             ->orderBy($sort, $direction)
-            ->paginate(10)
+            ->paginate(5)
             ->withQueryString();
 
         $progress = (clone $base)->selectRaw("
@@ -137,7 +137,7 @@ class MonitoringController extends Controller
             'creator:id,name,role',
         ])
         ->orderBy($sort, $direction)
-        ->paginate(10)
+        ->paginate(5)
         ->withQueryString();
 
     $epicsOptions = \App\Models\Epic::query()

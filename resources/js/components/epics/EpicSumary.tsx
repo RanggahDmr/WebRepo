@@ -67,7 +67,7 @@ export default function EpicSummary({ epic }: { epic: Epic }) {
         <div>
  
     <span className="mt-4 space-y-1 text-sm text-gray-600">
-         Created by:{" "}{epic.creator?.name ?? "-"}
+         Epic by:{" "}{epic.creator?.name ?? "-"}
     </span>
   </div>
 

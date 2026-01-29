@@ -2,9 +2,13 @@ import { useState } from "react";
 import Badge from "@/components/ui/Badge";
 import { Task } from "@/types/task";
 import TaskDetailModal from "./TaskDetailModal";
+import { usePage } from "@inertiajs/react";
+import { can } from "@/lib/can";
+import RowActions from "@/components/RowActions";
 
 function formatDate(date?: string | null) {
   if (!date) return "-";
+
   return new Date(date).toLocaleString("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -18,10 +22,18 @@ function displayTaskCode(task: any) {
 }
 
 export default function TaskTable({ tasks }: { tasks: Task[] }) {
+  const { auth }: any = usePage().props;
+
+  // rekomendasi: permission khusus delete_task
+  // kalau belum ada, sementara pakai update_task
+  const canDeleteTask = can(auth, "delete_task") || can(auth, "update_task");
+
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   if (!tasks.length) {
-    return <div className="py-10 text-center text-sm text-gray-500">No tasks.</div>;
+    return (
+      <div className="py-10 text-center text-sm text-gray-500">No tasks.</div>
+    );
   }
 
   function openTask(task: Task) {
@@ -46,7 +58,9 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
               <th className="px-4 py-3 w-[15%]">Updated at</th>
               <th className="px-4 py-3 w-[14%]">Created at</th>
               <th className="px-4 py-3 w-[12%]">Created by</th>
-              <th className="px-4 py-3 w-[6%] text-right">Action</th>
+
+              {/* ✅ new */}
+              <th className="px-4 py-3 w-[8%] text-right">Action</th>
             </tr>
           </thead>
 
@@ -73,7 +87,9 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
                 </td>
 
                 {/* DESCRIPTION */}
-                <td className="px-4 py-3 align-top">{task.description || "-"}</td>
+                <td className="px-4 py-3 align-top">
+                  {task.description || "-"}
+                </td>
 
                 {/* STATUS */}
                 <td className="px-4 py-3 align-top">
@@ -100,15 +116,29 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
                   {(task as any).creator?.name ?? "-"}
                 </td>
 
-                {/* ACTION */}
-                <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openTask(task)}
-                    className="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
-                  >
-                    View
-                  </button>
+                {/* ✅ ACTION: DELETE only */}
+                <td
+                  className="px-4 py-3 text-right"
+                  onClick={(e) => {
+                    // biar klik delete gak ikut buka modal
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  {canDeleteTask ? (
+                    <div className="flex justify-end">
+                      <RowActions
+                        viewHref="#"
+                        destroyRouteName="tasks.destroy"
+                        destroyParam={{ task: (task as any).uuid }}
+                        confirmTitle="Delete task?"
+                        confirmText={`Task "${task.title}" akan dihapus permanen.`}
+                        onDeleted={() => closeTask()}
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-gray-300">-</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -117,7 +147,9 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
       </div>
 
       {/* DETAIL MODAL */}
-      {selectedTask && <TaskDetailModal task={selectedTask} onClose={closeTask} />}
+      {selectedTask && (
+        <TaskDetailModal task={selectedTask} onClose={closeTask} />
+      )}
     </>
   );
 }

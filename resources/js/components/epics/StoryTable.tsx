@@ -5,18 +5,18 @@ import { Story } from "@/types/story";
 import StoryInlineSelect from "./StoryInlineSelect";
 import StoryInlineTitle from "./StoryInlineTitle";
 import Badge from "@/components/ui/Badge";
-import { useRole } from "@/lib/useRole";
 import { useState } from "react";
 import StoryDetailModal from "./StoryDetailModal";
-
-
+import { can } from "@/lib/can";
+import RowActions from "../RowActions";
 
 export default function StoryTable({ stories }: { stories: Story[] }) {
   const { auth }: any = usePage().props;
-  const { canCreateStory } = useRole();
-  const [open, setOpen] = useState(false)
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
+  const canUpdateStory = can(auth, "update_story");
+
+  const [open, setOpen] = useState(false);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
   if (!stories.length) {
     return (
@@ -38,7 +38,6 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
             <th className="px-4 py-3 w-[15%]">Updated</th>
             <th className="px-4 py-3 w-[15%]">Created</th>
             <th className="px-4 py-3 w-[15%]">CreatedBy</th>
-            
             <th className="px-4 py-3 w-[10%] text-right">Action</th>
           </tr>
         </thead>
@@ -51,44 +50,30 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
             >
               {/* ID / CODE */}
               <td className="px-4 py-3 font-medium text-blue-600">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedStory(s);
-                  setOpen(true);
-                }}
-                className="hover:underline"
-              >
-                {s.code}
-              </button>
-            </td>
-
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedStory(s);
+                    setOpen(true);
+                  }}
+                  className="hover:underline"
+                >
+                  {s.code}
+                </button>
+              </td>
 
               {/* TITLE */}
               <td className="px-4 py-3 font-medium text-gray-900">
-                {canCreateStory ? (
-                  <StoryInlineTitle
-                    storyUuid={s.uuid}
-                    value={s.title}
-                  />
+                {canUpdateStory ? (
+                  <StoryInlineTitle storyUuid={s.uuid} value={s.title} />
                 ) : (
                   s.title
                 )}
-
-                {/* {s.description ? (
-                  <div className="mt-1 text-xs text-gray-500 line-clamp-1">
-                    {s.description}
-                  </div>
-                ) : (
-                  <div className="mt-1 text-xs text-gray-400">
-                    No description
-                  </div>
-                )} */}
               </td>
 
               {/* PRIORITY */}
               <td className="px-4 py-3">
-                {canCreateStory ? (
+                {canUpdateStory ? (
                   <StoryInlineSelect
                     storyUuid={s.uuid}
                     field="priority"
@@ -106,7 +91,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
 
               {/* STATUS */}
               <td className="px-4 py-3">
-                {canCreateStory ? (
+                {canUpdateStory ? (
                   <StoryInlineSelect
                     storyUuid={s.uuid}
                     field="status"
@@ -128,7 +113,7 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
                 {s.updated_at ? formatDateTime(s.updated_at) : "-"}
               </td>
 
-             {/* CREATED */}
+              {/* CREATED */}
               <td className="px-4 py-3 text-gray-700">
                 {formatDateTime(s.created_at)}
               </td>
@@ -140,24 +125,32 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
 
               {/* ACTION */}
               <td className="px-4 py-3 text-right">
-                <div className="inline-flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      window.location.href = route("tasks.index", { story: s.uuid })
-                    }
-                    className="rounded-md border px-3 py-1.5 text-sm font-medium text-white bg-black hover:bg-gray-800 " 
-                  >
-                    View
-                  </button>
-
-                  {/* delete nanti di sini */}
-                </div>
+                {canUpdateStory ? (
+                  <div className="flex justify-end">
+                    <RowActions
+                      viewHref={route("tasks.index", { story: s.uuid })}
+                      destroyRouteName="stories.destroy"
+                      destroyParam={{ story: s.uuid }}
+                      confirmTitle="Delete story?"
+                      confirmText={`Story "${s.title}" akan dihapus permanen.`}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex justify-end">
+                    <Link
+                      href={route("tasks.index", { story: s.uuid })}
+                      className="text-blue-600 hover:underline"
+                    >
+                      VIEW
+                    </Link>
+                  </div>
+                )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
       <StoryDetailModal
         open={open}
         story={selectedStory}
@@ -166,7 +159,6 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
           setSelectedStory(null);
         }}
       />
-
     </div>
   );
 }

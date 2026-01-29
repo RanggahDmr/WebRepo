@@ -10,40 +10,53 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use App\Support\UniqueCode;
-
+use App\Support\BoardAccess;
 
 class EpicPageController extends Controller
 {
-    public function index(Board $board)
-    {
-             abort_unless(
-    $board->members()->where('users.id', request()->user()->id)->exists(),
-    403
-);
-        $epics = Epic::with('creator')
-            ->where('board_uuid', $board->uuid)
-            ->latest('updated_at')
-            ->get([
-                'uuid',
-                'board_uuid',
-                'code',
-                'title',
-                
-                'priority',
-                'description',
-                'status',
-                'created_by',
-                'created_at',
-                'updated_at',
+   public function index(Board $board)
+{
+    $user = request()->user();
+
+    // cek membership (PM juga ikut wajib member kalau kamu mau)
+    $isMember = $board->members()
+        ->where('users.id', $user->id)
+        ->exists();
+
+    if (!$isMember) {
+        $msg = $user->role === 'PM'
+            ? "You are PM but not a member of this board yet."
+            : "You don't have access to this board.";
+
+        return redirect()
+            ->route('dashboard')
+            ->with('alert', [
+                'type' => 'error',
+                'message' => $msg,
             ]);
-
-        return Inertia::render('Dashboard/Index', [
-            'board' => $board->only(['uuid', 'squad_code', 'title', 'created_at']),
-            'epics' => $epics,
-        ]);
-   
-
     }
+
+    $epics = Epic::with('creator')
+        ->where('board_uuid', $board->uuid)
+        ->latest('updated_at')
+        ->get([
+            'uuid',
+            'board_uuid',
+            'code',
+            'title',
+            'priority',
+            'description',
+            'status',
+            'created_by',
+            'created_at',
+            'updated_at',
+        ]);
+
+    return Inertia::render('Dashboard/Index', [
+        'board' => $board->only(['uuid', 'squad_code', 'title', 'created_at']),
+        'epics' => $epics,
+    ]);
+}
 
     public function show(Epic $epic)
     {
@@ -192,4 +205,47 @@ class EpicPageController extends Controller
             ->route('epics.show', $story->epic)
             ->with('success', 'Story updated');
     }
+    public function destroy(Request $request, \App\Models\Epic $epic)
+{
+    abort_unless($request->user()?->hasPermission('update_epic'), 403);
+
+    // optional: pastikan user boleh akses board epic ini
+    $board = $epic->board;
+    if ($board && !\App\Support\BoardAccess::canAccess($request->user(), $board)) {
+        return back()->with('alert', [
+            'type' => 'error',
+            'message' => "You don't have access to this board.",
+        ]);
+    }
+
+    $epic->delete();
+
+    return back()->with('alert', [
+        'type' => 'success',
+        'message' => 'Epic deleted.',
+    ]);
+}
+
+public function destroyStory(Request $request, \App\Models\Story $story)
+{
+    abort_unless($request->user()?->hasPermission('update_story'), 403);
+
+    $story->load('epic.board');
+
+    $board = $story->epic?->board;
+    if ($board && !\App\Support\BoardAccess::canAccess($request->user(), $board)) {
+        return back()->with('alert', [
+            'type' => 'error',
+            'message' => "You don't have access to this board.",
+        ]);
+    }
+
+    $story->delete();
+
+    return back()->with('alert', [
+        'type' => 'success',
+        'message' => 'Story deleted.',
+    ]);
+}
+
 }
