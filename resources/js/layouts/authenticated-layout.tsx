@@ -124,83 +124,69 @@ const canManageRoles = can(auth, "manage_roles");
               <div className="h-full flex flex-col justify-between rounded-lg bg-white p-4 shadow-sm">
                 {/* NAV */}
                 <nav className="flex flex-col gap-1 overflow-y-auto">
-                  {/* BOARD (Dropdown) */}
-                  <div className="flex flex-col">
-                    <button
-                      type="button"
-                      onClick={() => setBoardOpen((v) => !v)}
-                      className={`rounded-md px-3 py-2 text-sm font-medium transition flex items-center justify-between
-                        ${
-                          boardActive
-                            ? "bg-black text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                    >
-                      <span>Board</span>
-                      <span
-                        className={`transition-transform ${
-                          boardOpen ? "rotate-180" : ""
-                        }`}
-                      >
-                        ▾
-                      </span>
-                    </button>
+             {/* Dropdown items */}
+{boardOpen && (
+  <div className="mt-2 rounded-md border border-gray-200 bg-gray-100/80 p-1.5">
+    <div className="flex flex-col gap-1">
+      {(navBoards ?? []).map((b: any) => {
+        const uuid = b.uuid ?? null;
+        const squadCode = b.squad_code ?? null;
+        const isCurrent = !!currentBoardUuid && uuid === currentBoardUuid;
 
-                    {/* Dropdown items */}
-                    {boardOpen && (
-                      <div className="mt-1 ml-2 flex flex-col gap-1">
-                        {(navBoards ?? []).map((b: any) => {
-                          const uuid = b.uuid ?? null;
-                          const squadCode = b.squad_code ?? null;
-                          const isCurrent =
-                            !!currentBoardUuid && uuid === currentBoardUuid;
+        return (
+          <Link
+            key={uuid}
+            href={route("epics.index", { board: uuid })}
+            title={squadCode ?? ""}
+            className={[
+              "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
+              isCurrent
+                ? "bg-gray-200 text-gray-900 font-semibold"
+                : "text-gray-700 hover:bg-gray-200/70",
+            ].join(" ")}
+          >
+            {/* dot / dash */}
+            <span
+              className={[
+                "h-1.5 w-1.5 rounded-full shrink-0",
+                isCurrent ? "bg-gray-900" : "bg-gray-500 group-hover:bg-gray-700",
+              ].join(" ")}
+            />
+            <span className="truncate">{b.title}</span>
+          </Link>
+        );
+      })}
 
-                          return (
-                            <Link
-                              key={uuid}
-                              href={route("epics.index", { board: uuid })}
-                              className={[
-                                "rounded-md px-3 py-2 text-sm transition ",
-                                isCurrent
-                                  ? "bg-gray-100 text-gray-900 font-medium"
-                                  : "hover:bg-gray-50 text-gray-700",
-                              ].join(" ")}
-                              title={squadCode ?? ""}
-                            >
-                              <div className="font-medium">{b.title}</div>
-                              {/* <div className="text-xs text-gray-500 truncate">
-                                {uuid ?? "-"}
-                              </div> */}
-                            </Link>
-                          );
-                        })}
+      {/* ADD BOARD */}
+      <div className="mt-1 border-t border-gray-200 pt-1">
+        <button
+          type="button"
+          onClick={() => setOpenCreateBoard(true)}
+          disabled={!canManageBoards}
+          className={[
+            "w-full rounded-md px-3 py-2 text-left text-sm transition flex items-center justify-between",
+            canManageBoards
+              ? "text-gray-700 hover:bg-gray-200/70"
+              : "text-gray-400 cursor-not-allowed",
+          ].join(" ")}
+          title={canManageBoards ? "Create board" : "PM only"}
+        >
+          <span className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+            Add Board
+          </span>
+          <span className="text-lg leading-none">+</span>
+        </button>
+      </div>
 
-                        {/* ADD SQUAD (PM only) */}
-                        <div className="pt-1">
-                          <button
-                            type="button"
-                            onClick={() => setOpenCreateBoard(true)}
-                            disabled={!canManageBoards}
-                            className={`w-full rounded-md px-3 py-2 text-left text-sm transition flex items-center justify-between
-                              ${
-                                canManageBoards
-                                  ? "text-gray-700 hover:bg-gray-50"
-                                  : "text-gray-400 cursor-not-allowed"
-                              }`}
-                            title={canManageBoards ? "Create board" : "PM only"}
-                          >
-                            <span>Add Board</span>
-                            <span className="text-lg leading-none">+</span>
-                          </button>
-                        </div>
+      <CreateBoardModal
+        open={openCreateBoard}
+        onClose={() => setOpenCreateBoard(false)}
+      />
+    </div>
+  </div>
+)}
 
-                        <CreateBoardModal
-                          open={openCreateBoard}
-                          onClose={() => setOpenCreateBoard(false)}
-                        />
-                      </div>
-                    )}
-                  </div>
 
                   {/* HISTORY */}
                   <Link

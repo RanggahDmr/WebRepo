@@ -23,9 +23,6 @@ function displayTaskCode(task: any) {
 
 export default function TaskTable({ tasks }: { tasks: Task[] }) {
   const { auth }: any = usePage().props;
-
-  // rekomendasi: permission khusus delete_task
-  // kalau belum ada, sementara pakai update_task
   const canDeleteTask = can(auth, "delete_task") || can(auth, "update_task");
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -58,8 +55,6 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
               <th className="px-4 py-3 w-[15%]">Updated at</th>
               <th className="px-4 py-3 w-[14%]">Created at</th>
               <th className="px-4 py-3 w-[12%]">Created by</th>
-
-              {/* ✅ new */}
               <th className="px-4 py-3 w-[8%] text-right">Action</th>
             </tr>
           </thead>
@@ -116,7 +111,7 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
                   {(task as any).creator?.name ?? "-"}
                 </td>
 
-                {/* ✅ ACTION: DELETE only */}
+                
                 <td
                   className="px-4 py-3 text-right"
                   onClick={(e) => {
@@ -125,20 +120,23 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
                     e.stopPropagation();
                   }}
                 >
-                  {canDeleteTask ? (
+                  
                     <div className="flex justify-end">
                       <RowActions
                         viewHref="#"
                         destroyRouteName="tasks.destroy"
                         destroyParam={{ task: (task as any).uuid }}
                         confirmTitle="Delete task?"
-                        confirmText={`Task "${task.title}" akan dihapus permanen.`}
+                        canView={true}
+                        confirmText={`Task "${task.title}" will be permanent deleted.`}
                         onDeleted={() => closeTask()}
+                        canDelete={canDeleteTask}
+                         noPermissionText="You don't have permission for this"
                       />
                     </div>
-                  ) : (
+                  
                     <span className="text-gray-300">-</span>
-                  )}
+              
                 </td>
               </tr>
             ))}

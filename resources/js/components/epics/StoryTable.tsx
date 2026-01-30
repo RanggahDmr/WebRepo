@@ -125,26 +125,22 @@ export default function StoryTable({ stories }: { stories: Story[] }) {
 
               {/* ACTION */}
               <td className="px-4 py-3 text-right">
-                {canUpdateStory ? (
+                
                   <div className="flex justify-end">
                     <RowActions
                       viewHref={route("tasks.index", { story: s.uuid })}
                       destroyRouteName="stories.destroy"
                       destroyParam={{ story: s.uuid }}
+                      canView={true}
                       confirmTitle="Delete story?"
-                      confirmText={`Story "${s.title}" akan dihapus permanen.`}
+                      confirmText={`Story "${s.title}" will be deleted permanent.`}
+                      canDelete={canUpdateStory}
+                       noPermissionText="You don't have permission for this"
                     />
                   </div>
-                ) : (
-                  <div className="flex justify-end">
-                    <Link
-                      href={route("tasks.index", { story: s.uuid })}
-                      className="text-blue-600 hover:underline"
-                    >
-                      VIEW
-                    </Link>
-                  </div>
-                )}
+              
+                 
+               
               </td>
             </tr>
           ))}

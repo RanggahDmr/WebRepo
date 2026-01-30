@@ -1,42 +1,60 @@
-import { Head, Link, useForm, usePage } from "@inertiajs/react";
+import { Head, Link, useForm } from "@inertiajs/react";
 import { FormEvent, useEffect } from "react";
 import route from "@/lib/route";
 import toast from "react-hot-toast";
 import TrueFocus from "@/components/TrueFocus";
 
 export default function Login() {
-  const { flash }: any = usePage().props;
-
   const { data, setData, post, processing, errors } = useForm({
     email: "",
     password: "",
     remember: false,
   });
 
-  // ✅ show server alert (misal: role belum di-assign)
+  // Optional: kalau backend pakai withErrors(['auth' => '...']),
+  // kita tampilkan sebagai toast (dan tidak mengganggu field errors)
   useEffect(() => {
-    if (flash?.alert?.message) {
-      const type = flash.alert.type ?? "error";
-      if (type === "success") toast.success(flash.alert.message);
-      else toast.error(flash.alert.message);
-    }
-  }, [flash?.alert]);
+    const authMsg = (errors as any)?.auth;
+    if (authMsg) toast.error(authMsg);
+  }, [(errors as any)?.auth]);
 
   function submit(e: FormEvent) {
     e.preventDefault();
 
-    // post(route("login.store"), {
-    //   preserveScroll: true,
-    //   onError: () => {
-    //     // 422 invalid credentials / validation error
-    //     toast.error("Email atau password salah");
-    //   },
-    // });
     post(route("login.store"), {
-  preserveScroll: true,
-  onError: () => toast.error("Email atau password salah"),
-});
+      preserveScroll: true,
 
+      onStart: () => {
+        // optional: bersihin toast lama biar ga numpuk
+        toast.dismiss();
+      },
+
+      onSuccess: () => {
+        toast.success("Login success");
+      },
+
+      onError: (errs) => {
+        // 1) Role / forbidden message dari backend (recommended: withErrors(['auth' => '...']))
+        const authMsg = (errs as any)?.auth;
+        if (authMsg) {
+          toast.error(authMsg);
+          return;
+        }
+
+        // 2) Validation / wrong credential (umumnya email/password ada)
+        if ((errs as any)?.email || (errs as any)?.password) {
+          toast.error("Email atau password salah");
+          return;
+        }
+
+        // 3) Fallback
+        const msg =
+          (errs as any)?.message ||
+          (errs as any)?.error ||
+          "Login gagal. Coba lagi.";
+        toast.error(msg);
+      },
+    });
   }
 
   return (
@@ -55,7 +73,8 @@ export default function Login() {
             pauseBetweenAnimations={1}
           />
           <p className="mt-6 max-w-md text-gray-300 text-2xl">
-            Project management tool for developers. Track epics, stories, and tasks with clarity.
+            Project management tool for developers. Track epics, stories, and tasks
+            with clarity.
           </p>
         </div>
 
@@ -66,6 +85,13 @@ export default function Login() {
             <p className="mt-1 text-sm text-gray-500">Login ke WebRepo</p>
 
             <form onSubmit={submit} className="mt-6 space-y-4">
+              {/* Global auth error (optional show inline too) */}
+              {(errors as any)?.auth && (
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {(errors as any).auth}
+                </div>
+              )}
+
               {/* Email */}
               <div>
                 <label className="text-sm font-medium text-gray-700">Email</label>
@@ -75,8 +101,11 @@ export default function Login() {
                              focus:outline-none focus:ring-2 focus:ring-black"
                   value={data.email}
                   onChange={(e) => setData("email", e.target.value)}
+                  autoComplete="email"
                 />
-                {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                )}
               </div>
 
               {/* Password */}
@@ -88,8 +117,11 @@ export default function Login() {
                              focus:outline-none focus:ring-2 focus:ring-black"
                   value={data.password}
                   onChange={(e) => setData("password", e.target.value)}
+                  autoComplete="current-password"
                 />
-                {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                )}
               </div>
 
               {/* Remember */}

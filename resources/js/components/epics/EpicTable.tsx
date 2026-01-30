@@ -1,4 +1,4 @@
-import { Link, usePage } from "@inertiajs/react";
+import { usePage } from "@inertiajs/react";
 import route from "@/lib/route";
 import formatDateTime from "@/lib/date";
 import { Epic } from "@/types/epic";
@@ -10,18 +10,18 @@ import EpicDetailModal from "./EpicDetailModal";
 import { can } from "@/lib/can";
 import RowActions from "../RowActions";
 
-
 export default function EpicTable({ epics }: { epics: Epic[] }) {
   const { auth }: any = usePage().props;
-  const canEditEpic = can(auth, "update_epic")
+
+  const canEditEpic = can(auth, "update_epic");
+  const canDeleteEpic = can(auth, "delete_epic"); // <- kalau kamu belum punya permission ini, bisa pakai canEditEpic
+
   const [open, setOpen] = useState(false);
-  const [SelectedEpic, setSelectedEpic] = useState<any>(null);
+  const [selectedEpic, setSelectedEpic] = useState<any>(null);
 
   if (!epics.length) {
     return (
-      <div className="py-10 text-center text-sm text-gray-500">
-        No results.
-      </div>
+      <div className="py-10 text-center text-sm text-gray-500">No results.</div>
     );
   }
 
@@ -31,7 +31,7 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
         <thead className="border-b bg-gray-50 text-left text-xs uppercase text-gray-500">
           <tr>
             <th className="px-4 py-3 w-[20%]">Code</th>
-            <th className="px-4 py w-[40%]">Work</th>
+            <th className="px-4 py-3 w-[40%]">Work</th>
             <th className="px-4 py-3 w-[15%]">Priority</th>
             <th className="px-4 py-3 w-[15%]">Status</th>
             <th className="px-4 py-3 w-[20%]">Created</th>
@@ -43,118 +43,112 @@ export default function EpicTable({ epics }: { epics: Epic[] }) {
 
         <tbody>
           {epics
-          .filter(e => e.code)
-          .map((e) => (
-            <tr
-              key={e.uuid}
-              className="border-b last:border-0 hover:bg-gray-50 transition"
-            ><td className="px-4 py-3 font-medium text-blue-600">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedEpic(e);
-                  setOpen(true);
-                }}
-                className="px-4 py-3 font-medium text-blue-600 hover:underline"
+            .filter((e) => e.code)
+            .map((e) => (
+              <tr
+                key={e.uuid}
+                className="border-b last:border-0 hover:bg-gray-50 transition"
               >
-                {e.code}
-              </button>
+                {/* CODE */}
+                <td className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedEpic(e);
+                      setOpen(true);
+                    }}
+                    className="font-medium text-blue-600 hover:underline"
+                  >
+                    {e.code}
+                  </button>
+                </td>
 
-            </td>
-            
-              <td className="px-4 py-3 font-medium text-gray-900">
-                {canEditEpic ? (
-                  <EpicInlineTitle
-                    epicUuid={e.uuid}
-                    value={e.title}
-                  />
-                ) : (
-                  e.title
-                )}
-              </td>
+                {/* WORK / TITLE */}
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  {canEditEpic ? (
+                    <EpicInlineTitle epicUuid={e.uuid} value={e.title} />
+                  ) : (
+                    e.title
+                  )}
+                </td>
 
-              {/* PRIORITY (INLINE SELECT) */}
-              <td className="px-4 py-3">
-                {canEditEpic ? (
-                  <EpicInlineSelect
-                    epicUuid={e.uuid}
-                    field="priority"
-                    value={e.priority}
-                    options={[
-                      { label: "LOW", value: "LOW" },
-                      { label: "MEDIUM", value: "MEDIUM" },
-                      { label: "HIGH", value: "HIGH" },
-                    ]}
-                  />
-                ) : (
-                  <Badge variant={e.priority}>{e.priority}</Badge>
-                )}
-              </td>
+                {/* PRIORITY */}
+                <td className="px-4 py-3">
+                  {canEditEpic ? (
+                    <EpicInlineSelect
+                      epicUuid={e.uuid}
+                      field="priority"
+                      value={e.priority}
+                      options={[
+                        { label: "LOW", value: "LOW" },
+                        { label: "MEDIUM", value: "MEDIUM" },
+                        { label: "HIGH", value: "HIGH" },
+                      ]}
+                    />
+                  ) : (
+                    <Badge variant={e.priority}>{e.priority}</Badge>
+                  )}
+                </td>
 
-              {/* STATUS (INLINE SELECT) */}
-              <td className="px-4 py-3">
-                {canEditEpic ? (
-                  <EpicInlineSelect
-                    epicUuid={e.uuid}
-                    field="status"
-                    value={e.status}
-                    options={[
-                      { label: "TODO", value: "TODO" },
-                      { label: "IN_PROGRESS", value: "IN_PROGRESS" },
-                      { label: "DONE", value: "DONE" },
-                    ]}
-                  />
-                ) : (
-                  <Badge variant={e.status}>{e.status}</Badge>
-                )}
-              </td>
+                {/* STATUS */}
+                <td className="px-4 py-3">
+                  {canEditEpic ? (
+                    <EpicInlineSelect
+                      epicUuid={e.uuid}
+                      field="status"
+                      value={e.status}
+                      options={[
+                        { label: "TODO", value: "TODO" },
+                        { label: "IN_PROGRESS", value: "IN_PROGRESS" },
+                        { label: "DONE", value: "DONE" },
+                      ]}
+                    />
+                  ) : (
+                    <Badge variant={e.status}>{e.status}</Badge>
+                  )}
+                </td>
 
-              {/* CREATED */}
-              <td className="px-4 py-3 text-gray-700">
-                {formatDateTime(e.created_at)}
-              </td>
-              <td className="px-4 py-3 text-gray-700">
-                {formatDateTime(e.updated_at)}
-              </td>
-              <td className="px-4 py-3 text-gray-700">
-                 {e.creator?.name ?? "-"}
-              </td>
+                {/* CREATED */}
+                <td className="px-4 py-3 text-gray-700">
+                  {formatDateTime(e.created_at)}
+                </td>
 
-              {/* ACTION */}
-            <td className="px-4 py-3 text-right">
-  {/* Kalau boleh edit epic, berarti boleh delete juga (sementara) */}
-  {canEditEpic ? (
-    <div className="flex justify-end">
-      <RowActions
-        viewHref={route("epics.show", { epic: e.uuid })}
-        destroyRouteName="epics.destroy"
-        destroyParam={{ epic: e.uuid }}
-        confirmTitle="Delete epic?"
-        confirmText={`Epic "${e.title}" akan dihapus permanen.`}
-      />
-    </div>
-  ) : (
-    <div className="flex justify-end">
-      <Link
-        href={route("epics.show", { epic: e.uuid })}
-        className="text-blue-600 hover:underline"
-      >
-        VIEW
-      </Link>
-    </div>
-  )}
-</td>
+                {/* UPDATED */}
+                <td className="px-4 py-3 text-gray-700">
+                  {formatDateTime(e.updated_at)}
+                </td>
 
-            </tr>
-          ))}
+                {/* CREATED BY */}
+                <td className="px-4 py-3 text-gray-700">
+                  {e.creator?.name ?? "-"}
+                </td>
+
+                {/* ACTION (selalu konsisten: Eye + Trash, trash disabled kalau gak bisa) */}
+                <td className="px-4 py-3">
+                  <div className="flex justify-end">
+                    <RowActions
+                      viewHref={route("epics.show", { epic: e.uuid })}
+                      destroyRouteName="epics.destroy"
+                      destroyParam={{ epic: e.uuid }}
+                      confirmTitle="Delete epic?"
+                      confirmText={`Epic "${e.title}" will be permanently deleted.`}
+                      canView={true}
+                      canDelete={canDeleteEpic || canEditEpic} 
+                      noPermissionText="You don't have permission for this"
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
+
       <EpicDetailModal
         open={open}
-        epic={SelectedEpic}
+        epic={selectedEpic}
         onClose={() => {
           setOpen(false);
-          setSelectedEpic(null)
+          setSelectedEpic(null);
         }}
       />
     </div>
