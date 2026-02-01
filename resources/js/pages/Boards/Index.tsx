@@ -217,7 +217,7 @@ function BoardCard({
   return (
     <>
       <Link
-        href={route("epics.index", { board: board.uuid })}
+        href={route("boards.show", { board: board.uuid })} //epic.index -> boards.show
         className="relative block rounded-xl border bg-white p-4 shadow-sm transition hover:shadow"
       >
         {/* top-right actions */}

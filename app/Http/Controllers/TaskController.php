@@ -173,7 +173,7 @@ class TaskController extends Controller
     }
     public function destroy(Request $request, \App\Models\Task $task)
 {
-    abort_unless($request->user()?->hasPermission('update_task'), 403);
+    abort_unless($request->user()?->hasPermission('deleted_task'), 403);
 
     $task->load('story.epic.board');
 

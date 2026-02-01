@@ -11,64 +11,91 @@ use Inertia\Inertia;
 
 class BoardController extends Controller
 {
-    public function index(Request $request)
-    {
-        $user = $request->user();
+ public function index(Request $request)
+{
+    $user = $request->user();
 
-        // ✅ Tentukan kolom roles yang benar (biar gak error "roles.name not found")
-        $roleSelect = ['roles.id', 'roles.slug'];
-        if (Schema::hasColumn('roles', 'name')) {
-            $roleSelect[] = 'roles.name';
-        }
-
-        $boardsQuery = Board::query()
-            ->with([
-                // member basic (role enum lama masih boleh ada)
-                'members:id,name,role',
-
-                // roles relationship (pivot user_roles)
-                'members.roles' => fn ($q) => $q->select($roleSelect),
-            ])
-            ->latest('updated_at');
-
-        // ✅ Transisi: kalau sudah ada permission system, pakai itu
-        $canManageBoards = method_exists($user, 'hasPermission')
-            ? $user->hasPermission('manage_boards')
-            : ($user->role === 'PM');
-
-        // kalau tidak boleh manage boards -> cuma lihat board yg dia member
-        if (!$canManageBoards) {
-            $boardsQuery->whereHas('members', fn ($q) => $q->where('users.id', $user->id));
-        }
-
-        $boards = $boardsQuery->get([
-            'uuid', 'squad_code', 'title', 'created_by', 'created_at', 'updated_at',
-        ]);
-
-        $usersQuery = User::query()
-            ->with([
-                'roles' => fn ($q) => $q->select($roleSelect),
-            ])
-            ->orderBy('name');
-
-        $users = $usersQuery->get(['id', 'name', 'email']);
-
-        return Inertia::render('Boards/Index', [
-            'boards' => $boards,
-            'users'  => $users,
-        ]);
+    // pilih kolom roles yg aman
+    $roleSelect = ['roles.id', 'roles.slug'];
+    if (Schema::hasColumn('roles', 'name')) {
+        $roleSelect[] = 'roles.name';
     }
 
-    public function show(Board $board)
+    $boardsQuery = Board::query()
+        ->with([
+            'members:id,name,email', // batasi kolom user
+            'members.roles' => fn ($q) => $q->select($roleSelect),
+        ])
+        ->latest('updated_at');
+
+    // transisi: kalau sudah ada hasPermission, pakai itu; kalau belum fallback role lama
+    $canManageBoards = method_exists($user, 'hasPermission')
+        ? $user->hasPermission('manage_boards')
+        : ($user->role === 'PM');
+
+    // kalau bukan manager -> cuma board yang dia member
+    if (!$canManageBoards) {
+        $boardsQuery->whereHas('members', fn ($q) => $q->where('users.id', $user->id));
+    }
+
+    $boards = $boardsQuery->get([
+        'uuid', 'squad_code', 'title', 'created_by', 'created_at', 'updated_at',
+    ]);
+
+    $users = User::query()
+        ->with([
+            'roles' => fn ($q) => $q->select($roleSelect),
+        ])
+        ->orderBy('name')
+        ->get(['id', 'name', 'email']);
+
+    return Inertia::render('Boards/Index', [
+        'boards' => $boards,
+        'users'  => $users,
+    ]);
+}
+
+    public function show(Request $request, Board $board)
     {
-        return redirect()->route('epics.index', $board);
+        // sesuaikan relation yang kamu punya
+        $board->load([
+            'creator:id,name',
+        ]);
+
+        $epics = $board->epics()
+            ->with('creator:id,name')
+            ->latest('updated_at')
+            ->get([
+                'uuid',
+                'board_uuid',
+                'code',
+                'title',
+                'priority',
+                'status',
+                'created_by',
+                'created_at',
+                'updated_at',
+            ]);
+
+        // kalau kamu punya relasi members: belongsToMany(User::class, ...)
+        $members = $board->members()
+            ->with(['roles:id,slug,name']) // roles untuk display
+            ->get(['users.id', 'users.name', 'users.email']);
+
+        return Inertia::render('Boards/Show', [
+            'board' => $board->only(['uuid', 'squad_code', 'title', 'created_at', 'updated_at']) + [
+                'creator' => $board->creator,
+            ],
+            'epics' => $epics,
+            'members' => $members,
+        ]);
     }
 
     public function store(Request $request)
     {
         $user = $request->user();
 
-        // ✅ permission-first, fallback ke role enum lama
+        //  permission-first, fallback ke role enum lama
         $canCreateBoard = method_exists($user, 'hasPermission')
             ? $user->hasPermission('manage_boards')
             : ($user->role === 'PM');
@@ -105,7 +132,7 @@ class BoardController extends Controller
     }
     public function destroy(Request $request, \App\Models\Board $board)
 {
-    abort_unless($request->user()?->hasPermission('manage_boards'), 403);
+    abort_unless($request->user()?->hasPermission('deleted_boards'), 403);
 
     // optional: kalau board punya relasi anak, pastikan ON DELETE CASCADE / atau handle manual
     $board->delete();

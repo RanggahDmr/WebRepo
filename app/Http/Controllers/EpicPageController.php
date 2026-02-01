@@ -207,7 +207,7 @@ class EpicPageController extends Controller
     }
     public function destroy(Request $request, \App\Models\Epic $epic)
 {
-    abort_unless($request->user()?->hasPermission('update_epic'), 403);
+    abort_unless($request->user()?->hasPermission('deleted_epic'), 403);
 
     // optional: pastikan user boleh akses board epic ini
     $board = $epic->board;
@@ -228,7 +228,7 @@ class EpicPageController extends Controller
 
 public function destroyStory(Request $request, \App\Models\Story $story)
 {
-    abort_unless($request->user()?->hasPermission('update_story'), 403);
+    abort_unless($request->user()?->hasPermission('deleted_story'), 403);
 
     $story->load('epic.board');
 

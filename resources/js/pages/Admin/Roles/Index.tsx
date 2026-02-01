@@ -1,9 +1,9 @@
-import AuthenticatedLayout from "@/layouts/authenticated-layout";
 import { router, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import route from "@/lib/route";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AuthenticatedLayout from "@/layouts/authenticated-layout";
 
 type Permission = {
   id: number;
@@ -110,7 +110,9 @@ export default function RolesIndex({
                     <td className="px-4 py-3 font-medium text-gray-900">
                       {r.name}
                       {r.description ? (
-                        <div className="mt-1 text-xs text-gray-500">{r.description}</div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {r.description}
+                        </div>
                       ) : null}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{r.slug}</td>
@@ -266,17 +268,86 @@ function RoleFormModal({
 
   const disableSlug = editing?.slug === "admin";
 
+  // ✅ grouping helper
+  const groupKey = (key: string) => {
+    const k = (key ?? "").toLowerCase();
+
+    if (k.includes("story")) return "Story";
+    if (k.includes("epic")) return "Epic";
+    if (k.includes("task")) return "Task";
+    if (k.includes("board")) return "Board";
+    if (k.includes("member")) return "Members";
+    if (k.includes("user")) return "Users";
+    if (k.includes("role") || k.includes("permission")) return "Roles & Permissions";
+    if (k.includes("monitor")) return "Monitoring";
+    if (k.includes("history")) return "History";
+
+    return "Other";
+  };
+
+  // ✅ action order inside group (create/update/delete/view/manage/etc)
+  const actionWeight = (key: string) => {
+    const k = (key ?? "").toLowerCase();
+    if (k.startsWith("view")) return 1;
+    if (k.startsWith("create")) return 2;
+    if (k.startsWith("update")) return 3;
+    if (k.startsWith("delete")) return 4;
+    if (k.startsWith("manage")) return 5;
+    return 9;
+  };
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, Permission[]>();
+    permissions.forEach((p) => {
+      const g = groupKey(p.key);
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(p);
+    });
+
+    const order = [
+      "Board",
+      "Members",
+      "Epic",
+      "Story",
+      "Task",
+      "Users",
+      "Roles & Permissions",
+      "Monitoring",
+      "History",
+      "Other",
+    ];
+
+    return order
+      .filter((g) => map.has(g))
+      .map((g) => ({
+        group: g,
+        items: (map.get(g) ?? [])
+          .slice()
+          .sort((a, b) => {
+            const wa = actionWeight(a.key);
+            const wb = actionWeight(b.key);
+            if (wa !== wb) return wa - wb;
+            return a.key.localeCompare(b.key);
+          }),
+      }));
+  }, [permissions]);
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* overlay */}
       <button className="absolute inset-0 bg-black/30" onClick={onClose} />
 
-      <div className="relative w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl">
-        <div className="flex items-start justify-between">
+      {/* ✅ modal: wider + safe height + internal scroll */}
+      <div className="relative w-full max-w-5xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
+        {/* header */}
+        <div className="flex items-start justify-between p-6 border-b">
           <div>
             <div className="text-lg font-semibold text-gray-900">
               {isEdit ? "Edit Role" : "Create Role"}
             </div>
-            <div className="text-sm text-gray-500">Set role details and permissions.</div>
+            <div className="text-sm text-gray-500">
+              Set role details and permissions.
+            </div>
           </div>
 
           <button
@@ -287,89 +358,124 @@ function RoleFormModal({
           </button>
         </div>
 
-        <form onSubmit={submit} className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className="text-sm font-medium text-gray-700">Name</label>
-            <input
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Project Manager"
-            />
-            {errors?.name ? <div className="mt-1 text-xs text-red-600">{errors.name}</div> : null}
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-700">Slug</label>
-            <input
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm disabled:bg-gray-50"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="e.g. pm, qa, developer"
-              disabled={disableSlug}
-            />
-            <div className="mt-1 text-xs text-gray-400">lowercase, use a-z 0-9 _</div>
-            {errors?.slug ? <div className="mt-1 text-xs text-red-600">{errors.slug}</div> : null}
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium text-gray-700">Description</label>
-            <input
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional"
-            />
-            {errors?.description ? (
-              <div className="mt-1 text-xs text-red-600">{errors.description}</div>
-            ) : null}
-          </div>
-
-          <div className="md:col-span-2">
-            <div className="text-sm font-medium text-gray-700">Permissions</div>
-            <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-              {permissions.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 hover:bg-gray-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={permIds.has(p.id)}
-                    onChange={() => togglePerm(p.id)}
-                    className="mt-1"
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{p.name}</div>
-                    <div className="text-xs text-gray-500">{p.key}</div>
-                    {p.description ? (
-                      <div className="mt-1 text-xs text-gray-400">{p.description}</div>
-                    ) : null}
-                  </div>
-                </label>
-              ))}
+        {/* ✅ body scroll */}
+        <div className="p-6 overflow-y-auto">
+          <form onSubmit={submit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Name</label>
+              <input
+                className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Project Manager"
+              />
+              {errors?.name ? (
+                <div className="mt-1 text-xs text-red-600">{errors.name}</div>
+              ) : null}
             </div>
-            {errors?.permissions ? (
-              <div className="mt-1 text-xs text-red-600">{errors.permissions}</div>
-            ) : null}
-          </div>
 
-          <div className="md:col-span-2 flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white"
-            >
-              {isEdit ? "Save" : "Create"}
-            </button>
-          </div>
-        </form>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Slug</label>
+              <input
+                className="mt-1 w-full rounded-md border px-3 py-2 text-sm disabled:bg-gray-50"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="e.g. pm, qa, developer"
+                disabled={disableSlug}
+              />
+              <div className="mt-1 text-xs text-gray-400">
+                lowercase, use a-z 0-9 _
+              </div>
+              {errors?.slug ? (
+                <div className="mt-1 text-xs text-red-600">{errors.slug}</div>
+              ) : null}
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-gray-700">Description</label>
+              <input
+                className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional"
+              />
+              {errors?.description ? (
+                <div className="mt-1 text-xs text-red-600">{errors.description}</div>
+              ) : null}
+            </div>
+
+            {/* ✅ grouped permissions */}
+            <div className="md:col-span-2">
+              <div className="text-sm font-medium text-gray-700">Permissions</div>
+
+              <div className="mt-3 space-y-4">
+                {grouped.map(({ group, items }) => (
+                  <div key={group} className="rounded-xl border bg-white">
+                    <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {group}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {items.length} permissions
+                      </div>
+                    </div>
+
+                    <div className="p-4 grid grid-cols-1 gap-2 md:grid-cols-2">
+                      {items.map((p) => (
+                        <label
+                          key={p.id}
+                          className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={permIds.has(p.id)}
+                            onChange={() => togglePerm(p.id)}
+                            className="mt-1"
+                          />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-900">
+                              {p.name}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {p.key}
+                            </div>
+                            {p.description ? (
+                              <div className="mt-1 text-xs text-gray-400">
+                                {p.description}
+                              </div>
+                            ) : null}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {errors?.permissions ? (
+                <div className="mt-2 text-xs text-red-600">
+                  {errors.permissions}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="md:col-span-2 flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white"
+              >
+                {isEdit ? "Save" : "Create"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
