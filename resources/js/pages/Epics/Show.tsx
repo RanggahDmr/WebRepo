@@ -1,5 +1,5 @@
 import AuthenticatedLayout from "@/layouts/authenticated-layout";
-import { Head, Link } from "@inertiajs/react";
+import { Head, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import route from "@/lib/route";
 import Breadcrumbs from "@/components/Breadcrumbs";
@@ -11,6 +11,16 @@ import StoryTable from "@/components/epics/StoryTable";
 import StoryCreateModal from "@/components/epics/StoryCreateModal";
 import StoryEditModal from "@/components/epics/StoryEditModal";
 import { useRole } from "@/lib/useRole";
+import { pickDefaultId, normalizeText } from "@/lib/master";
+
+type MasterItem = {
+  id: number;
+  key?: string;
+  name: string;
+  is_default?: boolean;
+  is_done?: boolean;
+  color?: string | null;
+};
 
 export default function Show({
   epic,
@@ -20,34 +30,44 @@ export default function Show({
   stories: Story[];
 }) {
   const { canCreateStory } = useRole();
+  const page: any = usePage().props;
 
-  // filters
+  const storyStatuses: MasterItem[] = page.storyStatuses ?? [];
+  const storyPriorities: MasterItem[] = page.storyPriorities ?? [];
+
+  // default master ids (kalau kamu pengen default ke backlog, keep. kalau mau ALL, set null)
+  const defaultStatusId = pickDefaultId(storyStatuses, "backlog"); // bisa null kalau tidak ketemu
+  const defaultPriorityId = pickDefaultId(storyPriorities); // bisa null
+
+  // FILTER STATE (master-based)
   const [q, setQ] = useState("");
-  const [priority, setPriority] = useState<"" | Story["priority"]>("");
-  const [status, setStatus] = useState<"" | Story["status"]>("");
+  const [statusId, setStatusId] = useState<number | null>(null); //  default ALL biar ga ngunci backlog
+  const [priorityId, setPriorityId] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
-    const query = q.toLowerCase();
+    const qq = normalizeText(q);
 
-    return stories.filter((s) => {
+    return (stories ?? []).filter((s: any) => {
       const okQuery =
-        !query ||
-        s.title.toLowerCase().includes(query) ||
-        (s.description ?? "").toLowerCase().includes(query) ||
-        (s.code ?? "").toLowerCase().includes(query);
+        !qq ||
+        normalizeText(s.title).includes(qq) ||
+        normalizeText(s.description ?? "").includes(qq) ||
+        normalizeText(s.code ?? "").includes(qq);
 
-      return (
-        okQuery &&
-        (!priority || s.priority === priority) &&
-        (!status || s.status === status)
-      );
+      const sStatusId = s.status_id ?? s.statusMaster?.id ?? null;
+      const sPriorityId = s.priority_id ?? s.priorityMaster?.id ?? null;
+
+      const okStatus = statusId == null ? true : sStatusId === statusId;
+      const okPriority = priorityId == null ? true : sPriorityId === priorityId;
+
+      return okQuery && okStatus && okPriority;
     });
-  }, [stories, q, priority, status]);
+  }, [stories, q, statusId, priorityId]);
 
-  // modals
+  // MODALS
   const [createOpen, setCreateOpen] = useState(false);
-  const [editing, setEditing] = useState<Story | undefined>();
-   console.log("editing", editing)
+  const [editing, setEditing] = useState<Story | undefined>(undefined);
+
   return (
     <AuthenticatedLayout
       header={
@@ -57,52 +77,52 @@ export default function Show({
             items={[
               { label: "Board", href: route("dashboard") },
               { label: "Epics", href: route("dashboard") },
-              { label: epic.code },
+              { label: epic.code ?? "Epic" },
             ]}
           />
         </div>
       }
     >
-      <Head title={`Stories - Epic #${epic.uuid}`} />
+      <Head title={`Stories - ${epic.code ?? epic.uuid}`} />
 
       <div className="space-y-4">
         <EpicSummary epic={epic} />
 
         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
-          
           <div className="mb-6 flex items-center justify-between">
             <h3 className="text-lg font-semibold"></h3>
-            
+
             {canCreateStory && (
               <button
-                className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
+                type="button"
+                className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 sm:w-auto"
                 onClick={() => setCreateOpen(true)}
               >
                 + Create Story
               </button>
             )}
-            
           </div>
 
           <StoryFilters
             q={q}
             setQ={setQ}
-            priority={priority}
-            setPriority={setPriority}
-            status={status}
-            setStatus={setStatus}
-            total={stories.length}
+            statusId={statusId}
+            setStatusId={setStatusId}
+            priorityId={priorityId}
+            setPriorityId={setPriorityId}
+            statuses={storyStatuses}
+            priorities={storyPriorities}
+            total={stories?.length ?? 0}
             filtered={filtered.length}
             onClear={() => {
               setQ("");
-              setPriority("");
-              setStatus("");
+              setStatusId(null); //  reset ke ALL
+              setPriorityId(null);
             }}
           />
 
-          <StoryTable
-            stories={filtered}
-          />
+          {/* NOTE: StoryTable kamu sudah pakai inline select master, jadi aman */}
+          <StoryTable stories={filtered as any} />
         </div>
       </div>
 
@@ -111,11 +131,12 @@ export default function Show({
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />
-  {editing && ( 
-      <StoryEditModal
-        story={editing}
-        onClose={() => setEditing(undefined)}
-      />
+
+      {editing && (
+        <StoryEditModal
+          story={editing}
+          onClose={() => setEditing(undefined)}
+        />
       )}
     </AuthenticatedLayout>
   );

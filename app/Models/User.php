@@ -55,7 +55,9 @@ class User extends Authenticatable
         Board::class,
         'board_members',
         'user_id',    // pivot column yg nyimpan user id
-        'board_uuid'  // pivot column yg nyimpan board uuid
+        'board_uuid',  // pivot column yg nyimpan board uuid
+        'id',
+        'uuid'
     )->withTimestamps();
 }
    

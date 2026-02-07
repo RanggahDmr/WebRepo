@@ -12,7 +12,7 @@ class EpicObserver
             'after' => $epic->only(['title', 'status']),
         ]);
     }
-
+    
     public function updated(Epic $epic): void
     {
         if ($epic->wasChanged('status')) {

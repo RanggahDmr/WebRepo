@@ -1,29 +1,52 @@
-import { Story } from "@/types/story";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type MasterItem = {
+  id: number;
+  name: string;
+  key?: string;
+  is_default?: boolean;
+};
 
 type Props = {
   q: string;
   setQ: (v: string) => void;
-  priority: "" | Story["priority"];
-  setPriority: (v: any) => void;
-  status: "" | Story["status"];
-  setStatus: (v: any) => void;
+
+  statusId: number | null;
+  setStatusId: (v: number | null) => void;
+
+  priorityId: number | null;
+  setPriorityId: (v: number | null) => void;
+
+  statuses: MasterItem[];
+  priorities: MasterItem[];
+
   total: number;
   filtered: number;
   onClear: () => void;
 };
 
-export default function StoryFilters(props: Props) {
-  const {
-    q, setQ,
-    priority, setPriority,
-    status, setStatus,
-    total, filtered,
-    onClear,
-  } = props;
-
+export default function StoryFilters({
+  q,
+  setQ,
+  statusId,
+  setStatusId,
+  priorityId,
+  setPriorityId,
+  statuses,
+  priorities,
+  total,
+  filtered,
+  onClear,
+}: Props) {
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
-      <div className="flex-1 min-w-55">
+      <div className="flex-1 min-w-[220px]">
         <label className="text-xs font-semibold text-gray-500 uppercase">
           Search
         </label>
@@ -35,47 +58,63 @@ export default function StoryFilters(props: Props) {
         />
       </div>
 
-      <div className="min-w-40">
+      <div className="min-w-[220px]">
         <label className="text-xs font-semibold text-gray-500 uppercase">
           Priority
         </label>
-        <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value)}
-          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+
+        <Select
+          value={priorityId == null ? "ALL" : String(priorityId)}
+          onValueChange={(v) => setPriorityId(v === "ALL" ? null : Number(v))}
         >
-          <option value="">All</option>
-          <option value="LOW">LOW</option>
-          <option value="MEDIUM">MEDIUM</option>
-          <option value="HIGH">HIGH</option>
-        </select>
+          <SelectTrigger className="mt-1 h-10 w-full rounded-lg text-sm">
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
+
+          <SelectContent className="max-h-72">
+            <SelectItem value="ALL">All</SelectItem>
+            {(priorities ?? []).map((p) => (
+              <SelectItem key={p.id} value={String(p.id)}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="min-w-45">
+      <div className="min-w-[240px]">
         <label className="text-xs font-semibold text-gray-500 uppercase">
           Status
         </label>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+
+        <Select
+          value={statusId == null ? "ALL" : String(statusId)}
+          onValueChange={(v) => setStatusId(v === "ALL" ? null : Number(v))}
         >
-          <option value="">All</option>
-          <option value="TODO">TODO</option>
-          <option value="IN_PROGRESS">IN_PROGRESS</option>
-          <option value="DONE">DONE</option>
-        </select>
+          <SelectTrigger className="mt-1 h-10 w-full rounded-lg text-sm">
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
+
+          <SelectContent className="max-h-72">
+            <SelectItem value="ALL">All</SelectItem>
+            {(statuses ?? []).map((s) => (
+              <SelectItem key={s.id} value={String(s.id)}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <button
         type="button"
         onClick={onClear}
-        className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        className="h-10 rounded-lg border px-4 text-sm text-gray-700 hover:bg-gray-50"
       >
         Clear
       </button>
 
-      <div className="text-sm text-gray-500">
+      <div className="pb-2 text-sm text-gray-500">
         {filtered} / {total}
       </div>
     </div>

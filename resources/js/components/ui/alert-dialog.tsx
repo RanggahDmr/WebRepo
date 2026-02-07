@@ -6,10 +6,7 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 // Kalau kamu sudah punya cn() di project, pakai itu:
 import { cn } from "@/lib/utils";
 
-// Kalau ternyata kamu belum punya cn, komen import di atas,
-// lalu pakai cn sederhana ini:
-// const cn = (...classes: Array<string | undefined | false | null>) =>
-//   classes.filter(Boolean).join(" ");
+
 
 const AlertDialog = AlertDialogPrimitive.Root;
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;

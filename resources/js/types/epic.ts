@@ -1,5 +1,7 @@
-export type EpicPriority = "LOW" | "MEDIUM" | "HIGH";
-export type EpicStatus = "TODO" | "IN_PROGRESS" | "DONE";
+import type { MasterPriority, MasterStatus } from "./board-master";
+
+export type EpicPriorityLegacy = "LOW" | "MEDIUM" | "HIGH";
+export type EpicStatusLegacy = "TODO" | "IN_PROGRESS" | "DONE";
 
 export type Epic = {
   uuid: string;
@@ -9,8 +11,16 @@ export type Epic = {
   title: string;
   description: string | null;
 
-  priority: EpicPriority;
-  status: EpicStatus;
+  // legacy (masih ada di DB)
+  priority?: EpicPriorityLegacy | string;
+  status?: EpicStatusLegacy | string;
+
+  // new (master per board)
+  priority_id?: number | null;
+  status_id?: number | null;
+
+  priorityMaster?: MasterPriority | null;
+  statusMaster?: MasterStatus | null;
 
   created_at: string;
   updated_at: string;

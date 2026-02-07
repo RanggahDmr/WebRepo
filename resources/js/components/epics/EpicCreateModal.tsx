@@ -1,23 +1,33 @@
-import { useForm } from "@inertiajs/react";
+import { useForm, usePage } from "@inertiajs/react";
 import route from "@/lib/route";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
-import { EpicPriority, EpicStatus } from "@/types/epic";
+import { pickDefaultId } from "@/lib/master";
+
+type MasterItem = { id: number; name: string; key?: string; is_default?: boolean };
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  board: { uuid: string }; 
+  board: { uuid: string };
 };
 
 export default function EpicCreateModal({ open, onClose, board }: Props) {
-  const { data, setData, post, processing, errors, reset } = useForm({
+  const { epicPriorities = [], epicStatuses = [] }: any = usePage().props;
+
+  const defaultPriorityId = pickDefaultId(epicPriorities);
+  const defaultStatusId = pickDefaultId(epicStatuses, "backlog");
+
+  const { data, setData, post, processing, errors, reset } = useForm<{
+    title: string;
+    description: string;
+    priority_id: number | null;
+    status_id: number | null;
+  }>({
     title: "",
-    code: "",
-    
     description: "",
-    priority: "MEDIUM" as EpicPriority,
-    status: "TODO" as EpicStatus,
+    priority_id: defaultPriorityId,
+    status_id: defaultStatusId,
   });
 
   function submit(e: React.FormEvent) {
@@ -42,35 +52,49 @@ export default function EpicCreateModal({ open, onClose, board }: Props) {
         />
         {errors.title && <p className="text-sm text-red-600">{errors.title}</p>}
 
-      
-       
-
-        <input
+        <textarea
           placeholder="Description"
           className="w-full rounded-lg border px-3 py-2"
+          rows={4}
           value={data.description}
           onChange={(e) => setData("description", e.target.value)}
         />
 
         <div className="grid grid-cols-2 gap-4">
           <select
-            className="rounded-lg border px-3 py-2"
-            value={data.priority}
-            onChange={(e) => setData("priority", e.target.value as any)}
+            className="h-10 rounded-lg border px-3 text-sm"
+            value={data.priority_id ?? ""}
+            onChange={(e) =>
+              setData("priority_id", e.target.value ? Number(e.target.value) : null)
+            }
+            required
           >
-            <option value="LOW">LOW</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="HIGH">HIGH</option>
+            <option value="" disabled>
+              Priority
+            </option>
+            {epicPriorities.map((p : any) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
           </select>
 
           <select
-            className="rounded-lg border px-3 py-2"
-            value={data.status}
-            onChange={(e) => setData("status", e.target.value as any)}
+            className="h-10 rounded-lg border px-3 text-sm"
+            value={data.status_id ?? ""}
+            onChange={(e) =>
+              setData("status_id", e.target.value ? Number(e.target.value) : null)
+            }
+            required
           >
-            <option value="TODO">TODO</option>
-            <option value="IN_PROGRESS">IN_PROGRESS</option>
-            <option value="DONE">DONE</option>
+            <option value="" disabled>
+              Status
+            </option>
+            {epicStatuses.map((s: any) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -78,9 +102,7 @@ export default function EpicCreateModal({ open, onClose, board }: Props) {
           <Button variant="secondary" type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={processing}>
-            {processing ? "Saving..." : "Save"}
-          </Button>
+          <Button disabled={processing}>{processing ? "Saving..." : "Save"}</Button>
         </div>
       </form>
     </Modal>

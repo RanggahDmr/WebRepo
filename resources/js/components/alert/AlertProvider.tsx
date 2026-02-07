@@ -36,7 +36,7 @@ type ToastOptions = {
 
 type ToastItem = ToastOptions & {
   id: string;
-  visible: boolean; // ✅ untuk animasi keluar
+  visible: boolean; //  untuk animasi keluar
 };
 
 type AlertContextValue = {
@@ -54,7 +54,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   const [opts, setOpts] = useState<AlertOptions | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // ✅ Toast state
+  //  Toast state
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastTimers = useRef<Record<string, number>>({});
   const toastExitTimers = useRef<Record<string, number>>({});
@@ -146,7 +146,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     <AlertContext.Provider value={value}>
       {children}
 
-      {/* ✅ Toast container (smooth) */}
+      {/*  Toast container (smooth) */}
       <div className="fixed right-4 top-4 z-[9999] flex w-[340px] flex-col gap-2">
         {toasts.map((t) => (
           <div

@@ -16,7 +16,7 @@ class EnsureUserHasRole
             return redirect()->route('login');
         }
 
-        // ✅ RBAC: user harus punya minimal 1 role (di pivot user_roles)
+        //  RBAC: user harus punya minimal 1 role (di pivot user_roles)
         $hasAnyRole = $user->roles()->exists();
 
         if (!$hasAnyRole) {

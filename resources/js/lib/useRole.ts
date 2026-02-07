@@ -6,7 +6,8 @@ export function useRole() {
 
   return {
     canManageBoards: can(auth, "manage_boards"),
-    canManageMembers: can(auth, "manage_members"),
+  canManageMembers: canAny(auth, ["manage_member", "manage_members"]),
+
     canManageRoles: can(auth, "manage_roles"),
     canCreateEpic: can(auth, "create_epic"),
     canUpdateEpic: can(auth, "update_epic"),
@@ -16,6 +17,8 @@ export function useRole() {
     canUpdateTask: can(auth, "update_task"),
     canViewHistory: can(auth, "view_history"),
     canViewMonitoring: can(auth, "view_monitoring"),
+    canManageSettings: can(auth, "manage_board_settings"),
+
     canAny,
   };
 }

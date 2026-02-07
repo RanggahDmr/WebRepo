@@ -7,64 +7,85 @@ use App\Models\Board;
 use App\Models\Epic;
 use App\Models\Story;
 use App\Models\Task;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Support\UniqueCode;
 
-
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // ========= USERS =========
+        // 1) Seed RBAC dulu
+        $this->call([
+            RbacSeeder::class,
+            AdminUserSeeder::class, // optional
+        ]);
+
+        // 2) Ambil role-role
+        $roleAdmin = Role::where('slug', 'admin')->first();
+        $rolePm    = Role::where('slug', 'pm')->first();
+        $roleDev   = Role::where('slug', 'developer')->first();
+        $roleQa    = Role::where('slug', 'qa')->first();
+
+        // 3) Users
         $pm = User::firstOrCreate(
             ['email' => 'pm@webrepo.test'],
-            ['name' => 'PM User', 'password' => Hash::make('password'), 'role' => 'PM']
+            ['name' => 'PM User', 'password' => Hash::make('password')]
         );
+        if ($rolePm) $pm->roles()->syncWithoutDetaching([$rolePm->id]);
 
         $sad = User::firstOrCreate(
             ['email' => 'sad@webrepo.test'],
-            ['name' => 'SAD User', 'password' => Hash::make('password'), 'role' => 'SAD']
+            ['name' => 'SAD User', 'password' => Hash::make('password')]
         );
+        // SAD kamu map ke developer (atau bikin role 'sad' kalau memang role beda)
+        if ($roleDev) $sad->roles()->syncWithoutDetaching([$roleDev->id]);
 
         $prog = User::firstOrCreate(
             ['email' => 'prog@webrepo.test'],
-            ['name' => 'Programmer User', 'password' => Hash::make('password'), 'role' => 'PROGRAMMER']
+            ['name' => 'Programmer User', 'password' => Hash::make('password')]
         );
+        if ($roleDev) $prog->roles()->syncWithoutDetaching([$roleDev->id]);
 
-        // pool assignee (SAD/PROGRAMMER)
-        $assigneePool = User::query()
-            ->whereIn('role', ['SAD', 'PROGRAMMER'])
-            ->pluck('id')
-            ->all();
+        $qa = User::firstOrCreate(
+            ['email' => 'qa@webrepo.test'],
+            ['name' => 'QA User', 'password' => Hash::make('password')]
+        );
+        if ($roleQa) $qa->roles()->syncWithoutDetaching([$roleQa->id]);
 
-        if (count($assigneePool) === 0) {
-            $assigneePool = [$prog->id];
-        }
+        // pool assignee (dev/qa dll) -> sesuaikan kebutuhan
+        $assigneePool = collect([$sad->id, $prog->id, $qa->id])->filter()->values()->all();
+        if (count($assigneePool) === 0) $assigneePool = [$pm->id];
 
-        // ========= BOARDS =========
+        // 4) Boards (creator = PM) + jadikan member otomatis
         $boards = collect([
             'WebRepo Core',
             'Frontend App',
             'Backend Services',
         ])->map(function ($title) use ($pm) {
-            return Board::create([
-                // uuid auto (kalau sudah booted), kalau belum, isi manual:
-                'uuid' => (string) Str::uuid(),
-                'squad_code' => null,
-                'title' => $title,
-                'created_by' => $pm->id,
-            ]);
+            $board = Board::firstOrCreate(
+                ['title' => $title],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'squad_code' => null,
+                    'created_by' => $pm->id,
+                ]
+            );
+
+            // ⭐ penting: creator auto-member
+            if (method_exists($board, 'members')) {
+                $board->members()->syncWithoutDetaching([$pm->id]);
+            }
+
+            return $board;
         });
 
-        // ========= EPICS -> STORIES -> TASKS =========
+        // 5) Epics -> Stories -> Tasks
         $priorities = ['LOW', 'MEDIUM', 'HIGH'];
         $statusesEpicStory = ['TODO', 'IN_PROGRESS', 'DONE'];
-
-        // Task fields kamu: type, priority, status, position, assignee_id
-      
-        $taskStatuses = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']; // sesuaikan kalau enum kamu beda
+        $taskStatuses = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 
         foreach ($boards as $board) {
             for ($e = 1; $e <= 3; $e++) {
@@ -83,7 +104,7 @@ class DatabaseSeeder extends Seeder
                     $story = Story::create([
                         'uuid' => (string) Str::uuid(),
                         'epic_uuid' => $epic->uuid,
-                     'code' => UniqueCode::story(),
+                        'code' => UniqueCode::story(),
                         'title' => "Story $s for {$epic->title}",
                         'description' => "Story description $s for {$epic->title}",
                         'priority' => $priorities[array_rand($priorities)],
@@ -91,7 +112,6 @@ class DatabaseSeeder extends Seeder
                         'created_by' => $pm->id,
                     ]);
 
-                    // posisi task per story dibuat rapi 1..N
                     for ($t = 1; $t <= 6; $t++) {
                         Task::create([
                             'uuid' => (string) Str::uuid(),
@@ -99,7 +119,6 @@ class DatabaseSeeder extends Seeder
                             'code' => UniqueCode::task(),
                             'title' => "Task $t for {$story->title}",
                             'description' => "Task description $t",
-                           
                             'priority' => $priorities[array_rand($priorities)],
                             'status' => $taskStatuses[array_rand($taskStatuses)],
                             'position' => $t,

@@ -27,25 +27,25 @@ class LoginController extends Controller
                 ->onlyInput('email');
         }
 
-        // ✅ cek role setelah login sukses, sebelum redirect
+        //  cek role setelah login sukses, sebelum redirect
         $user = Auth::user();
-        if (!$user?->role) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+          if (!$user || !$user->roles()->exists()) {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-            return redirect()
-                ->route('login')
-                ->with('alert', [
-                    'type' => 'error',
-                    'message' => 'Akun kamu belum di-assign role oleh PM. Hubungi PM untuk aktivasi.',
-                ]);
-        }
-
-        $request->session()->regenerate();
-
-        return redirect()->route('dashboard');
+        return redirect()
+            ->route('login')
+            ->withErrors([
+                'auth' => 'Akun kamu belum di-assign role. Hubungi admin/PM untuk aktivasi.',
+            ])
+            ->onlyInput('email');
     }
+
+    $request->session()->regenerate();
+
+    return redirect()->route('dashboard');
+}
 
     public function destroy(Request $request)
     {

@@ -60,8 +60,6 @@ export default function TaskCard({ task, canDrag, onOpen }: Props) {
           ⋮⋮
         </div>
       )}
-
-      {/* CLICKABLE CONTENT */}
       <div
         onClick={(e) => {
           e.stopPropagation();

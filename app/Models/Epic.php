@@ -7,9 +7,6 @@ use Illuminate\Support\Str;
 
 class Epic extends Model
 {
-    protected $primaryKey = 'uuid';
-    public $incrementing = false;
-    protected $keyType = 'string';
 
     protected $fillable = [
         'uuid',
@@ -19,6 +16,8 @@ class Epic extends Model
         'description',
         'priority',
         'status',
+        'status_id',
+        'priority_id',
         'created_by',
     ];
 
@@ -46,4 +45,16 @@ class Epic extends Model
     {
         return 'EP-' . strtoupper(Str::random(6));
     }
+
+// App\Models\Epic.php
+public function statusMaster()
+{
+    return $this->belongsTo(\App\Models\BoardStatus::class, 'status_id');
+}
+
+public function priorityMaster()
+{
+    return $this->belongsTo(\App\Models\BoardPriority::class, 'priority_id');
+}
+
 }

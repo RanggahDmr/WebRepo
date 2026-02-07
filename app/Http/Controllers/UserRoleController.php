@@ -9,31 +9,55 @@ use Inertia\Inertia;
 
 class UserRoleController extends Controller
 {
-    public function index(Request $request)
+    private function roles()
     {
-        abort_unless($request->user()?->hasPermission('manage_roles'), 403);
-
-        $roles = Role::query()
+        return Role::query()
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
+    }
 
-        // pending = user tanpa role
-        $pending = User::query()
+    private function pendingQuery()
+    {
+        return User::query()
             ->whereDoesntHave('roles')
             ->orderByDesc('created_at')
             ->get(['id', 'name', 'email', 'created_at']);
+    }
 
-        // active = user punya role
-        $users = User::query()
+    private function activeQuery()
+    {
+        return User::query()
             ->whereHas('roles')
             ->with(['roles:id,name,slug'])
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
+    }
 
-        return Inertia::render('Admin/Users', [
-            'roles' => $roles,
-            'pending' => $pending,
-            'users' => $users,
+    //  page Active Users
+    public function active(Request $request)
+    {
+        abort_unless($request->user()?->hasPermission('manage_roles'), 403);
+
+        return Inertia::render('Admin/Users/Active', [
+            'roles' => $this->roles(),
+            'users' => $this->activeQuery(),
+
+            //  buat badge sidebar
+            'pendingCount' => User::query()->whereDoesntHave('roles')->count(),
+        ]);
+    }
+
+    //  page Pending Users
+    public function pending(Request $request)
+    {
+        abort_unless($request->user()?->hasPermission('manage_roles'), 403);
+
+        return Inertia::render('Admin/Users/Pending', [
+            'roles' => $this->roles(),
+            'pending' => $this->pendingQuery(),
+
+            //  buat badge sidebar
+            'pendingCount' => User::query()->whereDoesntHave('roles')->count(),
         ]);
     }
 
@@ -45,7 +69,6 @@ class UserRoleController extends Controller
             'role_id' => ['required', 'integer', 'exists:roles,id'],
         ]);
 
-        // kalau kamu mau user cuma 1 role:
         $user->roles()->sync([$data['role_id']]);
 
         return back()->with('alert', [
@@ -58,7 +81,6 @@ class UserRoleController extends Controller
     {
         abort_unless($request->user()?->hasPermission('manage_roles'), 403);
 
-        // safety: jangan delete diri sendiri
         if ($user->id === $request->user()->id) {
             return back()->with('alert', [
                 'type' => 'error',
@@ -66,7 +88,6 @@ class UserRoleController extends Controller
             ]);
         }
 
-        // safety: jangan delete admin terakhir (optional)
         $adminRoleId = Role::query()->where('slug', 'admin')->value('id');
         if ($adminRoleId) {
             $adminCount = User::query()

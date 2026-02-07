@@ -1,6 +1,6 @@
 import AuthenticatedLayout from "@/layouts/authenticated-layout";
 import { Head, usePage } from "@inertiajs/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import route from "@/lib/route";
 import { Epic } from "@/types/epic";
@@ -25,13 +25,51 @@ export default function Dashboard({
   board: Board;
   epics: Epic[];
 }) {
-  const { auth }: any = usePage().props;
+  const { auth, epicStatuses, epicPriorities }: any = usePage().props;
 
   // RBAC: create epic permission
   const canCreateEpic = can(auth, "create_epic");
 
   const filter = useEpicFilters(epics);
   const [openCreate, setOpenCreate] = useState(false);
+
+  const page: any = usePage().props;
+const epicStatusOptions = epicStatuses.map((s: any) => ({
+  label: s.name,
+  value: s.id,
+  color: s.color,
+}));
+
+const epicPriorityOptions = epicPriorities.map((p: any) => ({
+  label: p.name,
+  value: p.id,
+  color: p.color,
+}));
+
+
+const [q, setQ] = useState("");
+const [priorityId, setPriorityId] = useState<number | null>(null);
+const [statusId, setStatusId] = useState<number | null>(null);
+
+const filteredEpics = useMemo(() => {
+  const qq = q.trim().toLowerCase();
+
+  return (epics ?? []).filter((e: any) => {
+    const okQ =
+      !qq ||
+      (e.title ?? "").toLowerCase().includes(qq) ||
+      (e.description ?? "").toLowerCase().includes(qq) ||
+      (e.code ?? "").toLowerCase().includes(qq);
+
+    const ePriorityId = e.priority_id ?? e.priorityMaster?.id ?? null;
+    const eStatusId = e.status_id ?? e.statusMaster?.id ?? null;
+
+    const okPriority = priorityId == null ? true : ePriorityId === priorityId;
+    const okStatus = statusId == null ? true : eStatusId === statusId;
+
+    return okQ && okPriority && okStatus;
+  });
+}, [epics, q, priorityId, statusId]);
 
   return (
     <AuthenticatedLayout
@@ -89,26 +127,32 @@ export default function Dashboard({
             <button
               type="button"
               onClick={() => setOpenCreate(true)}
-              className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900"
+              className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
             >
               + Create Epic
             </button>
           )}
         </div>
 
-        <EpicFilters
-          q={filter.q}
-          setQ={filter.setQ}
-          priority={filter.priority}
-          setPriority={filter.setPriority}
-          status={filter.status}
-          setStatus={filter.setStatus}
-          total={epics.length}
-          filtered={filter.filtered.length}
-          onClear={filter.reset}
-        />
+       <EpicFilters
+  q={q}
+  setQ={setQ}
+  priorityId={priorityId}
+  setPriorityId={setPriorityId}
+  statusId={statusId}
+  setStatusId={setStatusId}
+  priorities={epicPriorities}
+  statuses={epicStatuses}
+  total={epics.length}
+  filtered={filteredEpics.length}
+  onClear={() => {
+    setQ("");
+    setPriorityId(null);
+    setStatusId(null);
+  }}
+/>
 
-        <EpicTable epics={filter.filtered} />
+<EpicTable epics={filteredEpics} />
       </div>
 
       {canCreateEpic && (

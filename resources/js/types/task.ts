@@ -1,34 +1,36 @@
-export type TaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
-export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
+import type { MasterStatus, MasterPriority } from "./board-master";
+
+export type TaskStatusLegacy = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+export type TaskPriorityLegacy = "LOW" | "MEDIUM" | "HIGH";
+export type TaskTypeLegacy = "FE" | "BE" | "QA";
 
 export type Task = {
   uuid: string;
+
+  // kadang ada, kadang engga (tapi kita butuh di UI)
   code?: string | null;
+
+  type?: TaskTypeLegacy | string | null;
 
   title: string;
   description?: string | null;
 
-  status: TaskStatus;
-  priority: TaskPriority;
+  position: number;
 
-  story_uuid?: string;
-  position?: number;
+  // legacy (kalau masih ada di DB)
+  status?: TaskStatusLegacy | string;
+  priority?: TaskPriorityLegacy | string;
 
-  created_by?: number;
-  created_at?: string;
-  updated_at?: string;
+  // new master per board
+  status_id?: number | null;
+  priority_id?: number | null;
 
-  creator?: {
-    id: number;
-    name: string;
-  };
+  statusMaster?: MasterStatus | null;
+  priorityMaster?: MasterPriority | null;
 
-  assignee?: {
-    id: number;
-    name: string;
-    role?: string;
-  };
+  created_at?: string | null;
+  updated_at?: string | null;
 
-  // kalau kamu load relations:
-  story?: any;
+  creator?: { id: number; name: string } | null;
+  assignee?: { id: number; name: string; role?: string } | null;
 };

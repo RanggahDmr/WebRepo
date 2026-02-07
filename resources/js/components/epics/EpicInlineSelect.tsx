@@ -1,65 +1,80 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { router } from "@inertiajs/react";
 import route from "@/lib/route";
 import Badge from "@/components/ui/Badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type Option = {
-  label: string;
-  value: string;
-};
+type Option = { label: string; value: number; color?:string|null };
 
 type Props = {
   epicUuid: string;
-  value: string;
+  field: "priority_id" | "status_id";
+  value: number | null;
   options: Option[];
-  field: "priority" | "status";
+  displayLabel?: string;
 };
 
-export default function EpicInlineSelect({
-  epicUuid,
-  value,
-  options,
-  field,
-}: Props) {
+export default function EpicInlineSelect({ epicUuid, field, value, options, displayLabel }: Props) {
   const [editing, setEditing] = useState(false);
-  const [current, setCurrent] = useState(value);
 
-  function save(val: string) {
+  // optimistic value
+  const [optimistic, setOptimistic] = useState<number | null>(value);
+
+  useEffect(() => {
+    setOptimistic(value);
+  }, [value]);
+
+  const shownValue = optimistic;
+ const shownMeta = useMemo(() => {
+  return options.find(o => o.value === shownValue) ?? null;
+}, [options, shownValue]);
+
+const shownLabel = shownMeta?.label ?? displayLabel ?? (shownValue == null ? "-" : String(shownValue));
+const shownColor = shownMeta?.color ?? null;
+
+
+  function save(nextVal: number | null) {
     setEditing(false);
-
-    if (val === value) return;
+    setOptimistic(nextVal); 
 
     router.patch(
       route("epics.update", { epic: epicUuid }),
-      { [field]: val },
-      { preserveScroll: true }
+      { [field]: nextVal },
+      {
+        preserveScroll: true,
+        only: ["epics", "epicStatuses", "epicPriorities"],
+        onError: () => {
+          // rollback kalau gagal
+          setOptimistic(value);
+        },
+      }
     );
   }
 
   if (!editing) {
     return (
-      <button className="block w-full text-left" onClick={() => setEditing(true)}>
-        <Badge variant={value}>{value}</Badge>
+      <button type="button" className="block w-full text-left" onClick={() => setEditing(true)}>
+        <Badge variant={shownLabel} color={shownColor}>{shownLabel}</Badge>
       </button>
     );
   }
 
   return (
-    <select
-      autoFocus
-      className="w-full rounded-md border px-2 py-1 text-sm max-w-full"
-      value={current}
-      onChange={(e) => {
-        setCurrent(e.target.value);
-        save(e.target.value);
-      }}
-      onBlur={() => save(current)}
+    <Select
+      value={shownValue == null ? "" : String(shownValue)}
+      onValueChange={(v) => save(v === "" ? null : Number(v))}
     >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger autoFocus className="h-8 w-full max-w-full rounded-md text-sm">
+        <SelectValue placeholder="Select..." />
+      </SelectTrigger>
+
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={String(o.value)}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

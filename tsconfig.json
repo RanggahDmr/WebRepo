@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        
         /* Visit https://aka.ms/tsconfig to read more about this file */
 
         /* Projects */
@@ -112,6 +113,7 @@
             "@/*": ["./resources/js/*"]
         },
         "jsx": "react-jsx"
+    
     },
     "include": [
         "resources/js/**/*.ts",

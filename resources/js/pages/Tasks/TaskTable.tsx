@@ -1,30 +1,32 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Badge from "@/components/ui/Badge";
-import { Task } from "@/types/task";
-import TaskDetailModal from "./TaskDetailModal";
 import { usePage } from "@inertiajs/react";
 import { can } from "@/lib/can";
 import RowActions from "@/components/RowActions";
+import TaskDetailModal from "./TaskDetailModal";
+import TaskInlineSelect from "@/components/Task/TaskInlineSelect";
+import TaskInlineTitle from "@/components/Task/TaskInlineTitle";
+
+import type { Task } from "@/types/task";
 
 function formatDate(date?: string | null) {
   if (!date) return "-";
-
   return new Date(date).toLocaleString("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
   });
 }
 
-function displayTaskCode(task: any) {
+function displayTaskCode(task: Task) {
   if (task?.code) return task.code;
   if (task?.uuid) return `TSK-${String(task.uuid).slice(0, 8).toUpperCase()}`;
   return "-";
 }
 
 export default function TaskTable({ tasks }: { tasks: Task[] }) {
-  const { auth }: any = usePage().props;
+  const { auth, taskStatuses =[], taskPriorities = [] }: any = usePage().props;
   const canDeleteTask = can(auth, "delete_task") || can(auth, "update_task");
-
+  const canEditTask = can(auth, "update_task");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   if (!tasks.length) {
@@ -40,6 +42,16 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
   function closeTask() {
     setSelectedTask(null);
   }
+  const statusOptions = useMemo(
+  () => (taskStatuses ?? []).map((s: any) => ({ label: s.name, value: s.id, color: s.color })),
+  [taskStatuses]
+);
+
+const priorityOptions = useMemo(
+  () => (taskPriorities ?? []).map((p: any) => ({ label: p.name, value: p.id, color: p.color })),
+  [taskPriorities]
+);
+
 
   return (
     <>
@@ -50,8 +62,8 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
               <th className="px-4 py-3 w-[6%]">ID</th>
               <th className="px-4 py-3 w-[22%]">Title</th>
               <th className="px-4 py-3 w-[22%]">Description</th>
-              <th className="px-4 py-3 w-[8%]">Status</th>
-              <th className="px-4 py-3 w-[15%]">Priority</th>
+              <th className="px-4 py-3 w-[10%]">Status</th>
+              <th className="px-4 py-3 w-[12%]">Priority</th>
               <th className="px-4 py-3 w-[15%]">Updated at</th>
               <th className="px-4 py-3 w-[14%]">Created at</th>
               <th className="px-4 py-3 w-[12%]">Created by</th>
@@ -60,91 +72,117 @@ export default function TaskTable({ tasks }: { tasks: Task[] }) {
           </thead>
 
           <tbody>
-            {tasks.map((task) => (
-              <tr
-                key={(task as any).uuid}
-                className="border-b last:border-0 hover:bg-gray-50 transition"
-              >
-                {/* ID */}
-                <td
-                  className="px-4 py-3 text-blue-600 font-medium cursor-pointer hover:underline"
-                  onClick={() => openTask(task)}
+            {tasks.map((task) => {
+              const statusLabel =
+                task.statusMaster?.name ?? (task.status ?? "-");
+              const priorityLabel =
+                task.priorityMaster?.name ?? (task.priority ?? "-");
+
+              return (
+                <tr
+                  key={task.uuid}
+                  className="border-b last:border-0 hover:bg-gray-50 transition"
                 >
-                  {displayTaskCode(task)}
-                </td>
+                  {/* ID */}
+                  <td
+                    className="px-4 py-3 text-blue-600 font-medium cursor-pointer hover:underline"
+                    onClick={() => openTask(task)}
+                  >
+                    {displayTaskCode(task)}
+                  </td>
 
-                {/* TITLE */}
-                <td
-                  className="px-4 py-3 align-top cursor-pointer"
-                  onClick={() => openTask(task)}
-                >
-                  <div className="font-medium text-gray-900">{task.title}</div>
-                </td>
+                  {/* TITLE */}
+                  <td
+                    className="px-4 py-3 align-top cursor-pointer"
+                    onClick={() => openTask(task)}
+                  >
+                    <div className="font-medium text-gray-900">{task.title}</div>
+                  </td>
 
-                {/* DESCRIPTION */}
+                  {/* DESCRIPTION */}
+                  <td className="px-4 py-3 align-top">
+                    {task.description || "-"}
+                  </td>
+
+                  {/* STATUS */}
+                 <td className="px-4 py-3 align-top">
+                      {canEditTask ? (
+                        <TaskInlineSelect
+                          taskUuid={task.uuid}
+                          field="status_id"
+                          value={task.status_id ?? task.statusMaster?.id ?? null}
+                          options={statusOptions}
+                          displayLabel={statusLabel}
+                        />
+                      ) : (
+                        <Badge variant={statusLabel as any} color={task.statusMaster?.color ?? null}>
+                          {statusLabel}
+                        </Badge>
+                      )}
+                  </td>
+
+                  {/* PRIORITY */}
                 <td className="px-4 py-3 align-top">
-                  {task.description || "-"}
-                </td>
+                      {canEditTask ? (
+                        <TaskInlineSelect
+                          taskUuid={task.uuid}
+                          field="priority_id"
+                          value={task.priority_id ?? task.priorityMaster?.id ?? null}
+                          options={priorityOptions}
+                          displayLabel={priorityLabel}
+                        />
+                      ) : (
+                        <Badge variant={priorityLabel as any} color={task.priorityMaster?.color ?? null}>
+                          {priorityLabel}
+                        </Badge>
+                      )}
+                    </td>
 
-                {/* STATUS */}
-                <td className="px-4 py-3 align-top">
-                  <Badge variant={task.status}>{task.status}</Badge>
-                </td>
 
-                {/* PRIORITY */}
-                <td className="px-4 py-3 align-top">
-                  <Badge variant={task.priority}>{task.priority}</Badge>
-                </td>
+                  {/* UPDATED AT */}
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    {formatDate(task.updated_at)}
+                  </td>
 
-                {/* UPDATED AT */}
-                <td className="px-4 py-3 text-xs text-gray-600">
-                  {formatDate((task as any).updated_at)}
-                </td>
+                  {/* CREATED AT */}
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    {formatDate(task.created_at)}
+                  </td>
 
-                {/* CREATED AT */}
-                <td className="px-4 py-3 text-xs text-gray-600">
-                  {formatDate((task as any).created_at)}
-                </td>
+                  {/* CREATED BY */}
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {task.creator?.name ?? "-"}
+                  </td>
 
-                {/* CREATED BY */}
-                <td className="px-4 py-3 text-sm text-gray-700">
-                  {(task as any).creator?.name ?? "-"}
-                </td>
-
-                
-                <td
-                  className="px-4 py-3 text-right"
-                  onClick={(e) => {
-                    // biar klik delete gak ikut buka modal
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  
+                  {/* ACTION */}
+                  <td
+                    className="px-4 py-3 text-right"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
                     <div className="flex justify-end">
                       <RowActions
                         viewHref="#"
                         destroyRouteName="tasks.destroy"
-                        destroyParam={{ task: (task as any).uuid }}
+                        destroyParam={{ task: task.uuid }}
                         confirmTitle="Delete task?"
-                        canView={true}
                         confirmText={`Task "${task.title}" will be permanent deleted.`}
-                        onDeleted={() => closeTask()}
+                        canView={true}
+                        onDeleted={closeTask}
                         canDelete={canDeleteTask}
-                         noPermissionText="You don't have permission for this"
+                        noPermissionText="You don't have permission for this"
                       />
                     </div>
-                  
-                    <span className="text-gray-300">-</span>
-              
-                </td>
-              </tr>
-            ))}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* DETAIL MODAL */}
       {selectedTask && (
         <TaskDetailModal task={selectedTask} onClose={closeTask} />
       )}

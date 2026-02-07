@@ -28,7 +28,7 @@ class RbacSeeder extends Seeder
             ['key' => 'create_task',     'name' => 'Create Task'],
             ['key' => 'update_task',     'name' => 'Update Task'],
 
-            // ✅ delete permissions (separate)
+            //  delete permissions (separate)
             ['key' => 'delete_board',    'name' => 'Delete Board'],
             ['key' => 'delete_epic',     'name' => 'Delete Epic'],
             ['key' => 'delete_story',    'name' => 'Delete Story'],
@@ -82,7 +82,7 @@ class RbacSeeder extends Seeder
             'create_story','update_story',
             'create_task','update_task',
 
-            // ✅ delete terpisah (PM boleh domain delete)
+            //  delete terpisah (PM boleh domain delete)
             'delete_board','delete_epic','delete_story','delete_task',
 
             'view_history','view_monitoring',

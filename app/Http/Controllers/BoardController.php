@@ -7,47 +7,36 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use App\Services\BoardMasterSeeder;
 
 class BoardController extends Controller
 {
- public function index(Request $request)
+public function index(Request $request)
 {
     $user = $request->user();
 
-    // pilih kolom roles yg aman
+    // pilih kolom roles yg aman (karena roles.name kadang tidak ada)
     $roleSelect = ['roles.id', 'roles.slug'];
     if (Schema::hasColumn('roles', 'name')) {
         $roleSelect[] = 'roles.name';
     }
 
-    $boardsQuery = Board::query()
+    $boards = Board::query()
         ->with([
-            'members:id,name,email', // batasi kolom user
+            'members:id,name,email',
             'members.roles' => fn ($q) => $q->select($roleSelect),
         ])
-        ->latest('updated_at');
-
-    // transisi: kalau sudah ada hasPermission, pakai itu; kalau belum fallback role lama
-    $canManageBoards = method_exists($user, 'hasPermission')
-        ? $user->hasPermission('manage_boards')
-        : ($user->role === 'PM');
-
-    // kalau bukan manager -> cuma board yang dia member
-    if (!$canManageBoards) {
-        $boardsQuery->whereHas('members', fn ($q) => $q->where('users.id', $user->id));
-    }
-
-    $boards = $boardsQuery->get([
-        'uuid', 'squad_code', 'title', 'created_by', 'created_at', 'updated_at',
-    ]);
+        //  SELALU filter by membership (semua user)
+        ->whereHas('members', fn ($q) => $q->where('users.id', $user->id))
+        ->latest('updated_at')
+        ->get(['uuid','squad_code','title','created_by','created_at','updated_at']);
 
     $users = User::query()
-        ->with([
-            'roles' => fn ($q) => $q->select($roleSelect),
-        ])
+        ->with(['roles' => fn ($q) => $q->select($roleSelect)])
         ->orderBy('name')
-        ->get(['id', 'name', 'email']);
+        ->get(['id','name','email']);
 
     return Inertia::render('Boards/Index', [
         'boards' => $boards,
@@ -55,9 +44,25 @@ class BoardController extends Controller
     ]);
 }
 
+
     public function show(Request $request, Board $board)
     {
         // sesuaikan relation yang kamu punya
+         $user = $request->user();
+
+    $isMember = $board->members()->where('users.id', $user->id)->exists();
+    if (!$isMember) {
+        $message = "You don't have access to this board.";
+
+        if ($request->header('X-Inertia')) abort(403, $message);
+
+        return redirect()
+            ->route('dashboard')
+            ->with('alert', [
+                'type' => 'error',
+                'message' => $message,
+            ]);
+    }
         $board->load([
             'creator:id,name',
         ]);
@@ -96,9 +101,7 @@ class BoardController extends Controller
         $user = $request->user();
 
         //  permission-first, fallback ke role enum lama
-        $canCreateBoard = method_exists($user, 'hasPermission')
-            ? $user->hasPermission('manage_boards')
-            : ($user->role === 'PM');
+       $canCreateBoard = $user?->hasPermission('manage_boards') ?? false;
 
         abort_unless($canCreateBoard, 403);
 
@@ -108,15 +111,14 @@ class BoardController extends Controller
             'members' => ['nullable', 'array'],
             'members.*' => ['integer', 'exists:users,id'],
         ]);
-
+        DB::transaction(function () use ($data, $user, &$board)
+        {
         $board = Board::create([
             'uuid' => (string) Str::uuid(),
             'squad_code' => $data['squad_code'] ?? null,
             'title' => $data['title'],
             'created_by' => $user->id,
         ]);
-
-        // creator auto join
         $memberIds = collect($data['members'] ?? [])
             ->push($user->id)
             ->unique()
@@ -124,6 +126,14 @@ class BoardController extends Controller
             ->all();
 
         $board->members()->syncWithoutDetaching($memberIds);
+
+        $masterSeeder->seedDefaultsForBoard($board);
+
+        return $board;
+        });
+     
+        // creator auto join
+        
 
         return back()->with('alert', [
             'type' => 'success',

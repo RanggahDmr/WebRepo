@@ -2,33 +2,37 @@
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class Task extends Model
 {
-    protected $primaryKey = 'uuid';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    // ✅ JANGAN ubah primaryKey jika table masih punya id
+    // cukup gunakan getRouteKeyName untuk route model binding uuid
+    public function getRouteKeyName()
+    {
+        return 'uuid';
+    }
 
     protected $fillable = [
         'uuid',
         'story_uuid',
         'code',
+
+        // ✅ master ids
+        'priority_id',
+        'status_id',
+
+        // legacy strings (optional, bisa kamu hapus nanti)
         'priority',
+        'status',
+
         'title',
         'description',
         'type',
-        'status',
         'position',
         'assignee_id',
         'created_by',
     ];
-
-    public function getRouteKeyName()
-    {
-        return 'uuid';
-    }
 
     public function creator()
     {
@@ -43,5 +47,15 @@ class Task extends Model
     public function story()
     {
         return $this->belongsTo(Story::class, 'story_uuid', 'uuid');
+    }
+
+    public function statusMaster()
+    {
+        return $this->belongsTo(BoardStatus::class, 'status_id');
+    }
+
+    public function priorityMaster()
+    {
+        return $this->belongsTo(BoardPriority::class, 'priority_id');
     }
 }

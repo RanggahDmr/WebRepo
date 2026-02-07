@@ -1,4 +1,4 @@
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import route from "@/lib/route";
 
 type Props = {
@@ -8,7 +8,12 @@ type Props = {
 };
 
 export default function CreateTaskModal({ open, onClose, storyUuid }: Props) {
+  const { taskPriorities = [] }: any = usePage().props;
+
   if (!open) return null;
+
+  const defaultPriorityId =
+    taskPriorities.find((p: any) => p.is_default)?.id ?? taskPriorities[0]?.id ?? "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -21,22 +26,39 @@ export default function CreateTaskModal({ open, onClose, storyUuid }: Props) {
             const form = e.currentTarget;
             const data = new FormData(form);
 
-            router.post(
-              route("tasks.store", { story: storyUuid }),
-              Object.fromEntries(data),
-              { onSuccess: onClose, preserveScroll: true }
-            );
+           router.post(
+  route("tasks.store", { story: storyUuid }),
+  Object.fromEntries(data),
+  {
+    preserveScroll: true,
+    onSuccess: () => {
+      //  ambil props terbaru dari server (tasks + masters)
+      router.reload({ only: ["tasks", "taskStatuses", "taskPriorities"] });
+      onClose();
+    },
+  }
+);
           }}
           className="space-y-3"
         >
+          {/* PRIORITY (master) */}
           <select
-            name="priority"
+            name="priority_id"
             className="w-full rounded border px-3 py-2 text-sm"
-            defaultValue="MEDIUM"
+            defaultValue={String(defaultPriorityId)}
+            required
+            disabled={!taskPriorities.length}
+            title={!taskPriorities.length ? "No priorities configured for this board" : ""}
           >
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
+            {!taskPriorities.length ? (
+              <option value="">No priorities</option>
+            ) : (
+              taskPriorities.map((p: any) => (
+                <option key={p.id} value={String(p.id)}>
+                  {p.name}
+                </option>
+              ))
+            )}
           </select>
 
           <input
@@ -63,7 +85,8 @@ export default function CreateTaskModal({ open, onClose, storyUuid }: Props) {
             </button>
             <button
               type="submit"
-              className="rounded bg-black px-3 py-1 text-sm text-white"
+              className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
+              disabled={!taskPriorities.length}
             >
               Create
             </button>

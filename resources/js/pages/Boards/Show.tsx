@@ -4,6 +4,15 @@ import route from "@/lib/route";
 import { useMemo, useState } from "react";
 import { can } from "@/lib/can";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+
 import EpicTable from "@/components/epics/EpicTable";
 import CreateEpicModal from "@/components/epics/EpicCreateModal"; // sesuaikan kalau namanya beda
 
@@ -151,18 +160,24 @@ export default function Show({ board, epics, members, users = [] }: Props) {
               {/* Add member */}
               {canManageMembers ? (
                 <div className="mt-4 flex items-center gap-2">
-                  <select
-                    className="w-full rounded border px-2 py-2 text-sm"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                  >
-                    <option value="">Select user…</option>
-                    {availableUsers.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} ({roleLabel(u)})
-                      </option>
-                    ))}
-                  </select>
+                 <Select
+  value={userId ? String(userId) : "NONE"}
+  onValueChange={(v) => setUserId(v === "NONE" ? "" : v)}
+>
+  <SelectTrigger className="h-10 w-full rounded-md text-sm">
+    <SelectValue placeholder="Select user…" />
+  </SelectTrigger>
+
+  <SelectContent className="max-h-64">
+    <SelectItem value="NONE">Select user…</SelectItem>
+    {availableUsers.map((u) => (
+      <SelectItem key={u.id} value={String(u.id)}>
+        {u.name} ({roleLabel(u)})
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
 
                   <button
                     type="button"
@@ -181,6 +196,7 @@ export default function Show({ board, epics, members, users = [] }: Props) {
             </>
           )}
         </div>
+        
       </div>
 
       {/* Create Epic Modal */}

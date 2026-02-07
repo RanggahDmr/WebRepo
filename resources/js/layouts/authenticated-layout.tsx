@@ -1,24 +1,47 @@
-import { Link, usePage, router } from "@inertiajs/react";
-import { PropsWithChildren, ReactNode, useEffect, useState } from "react";
+import { router, usePage } from "@inertiajs/react";
+import { PropsWithChildren, ReactNode, useEffect, useMemo, useState } from "react";
 import route from "@/lib/route";
 import FlashMessage from "@/components/ui/FlashMessage";
-import CreateBoardModal from "@/pages/Boards/CreateBoardModal";
 import { useAlert } from "@/components/alert/AlertProvider";
 import { can } from "@/lib/can";
+
+import MobileSidebar from "./MobileSidebar";
+import SidebarNav from "./SidebarNav";
+
+type RoleLite = {
+  id: number;
+  slug: string;
+  name?: string;
+};
+
+type UserOption = {
+  id: number;
+  name: string;
+  email?: string;
+  roles?: RoleLite[];
+};
+
+const roleLabel = (u?: UserOption | null) => {
+  const slugs = (u?.roles ?? []).map((r) => r.slug);
+  return slugs.length ? slugs.join(", ") : "-";
+};
 
 export default function AuthenticatedLayout({
   header,
   children,
   rightSidebar,
   rightSidebarOpen = false,
+  onCloseRightSidebar,
 }: PropsWithChildren<{
   header?: ReactNode;
   rightSidebar?: ReactNode;
   rightSidebarOpen?: boolean;
+  onCloseRightSidebar?: () => void;
 }>) {
-  const { auth, navBoards, board }: any = usePage().props;
-  const { alert, confirm } = useAlert();
+  const { auth, navBoards, board, flash, pendingCount }: any = usePage().props;
+  const { alert, confirm, toast } = useAlert();
 
+  // Active states
   const dashboardActive = route().current("dashboard");
 
   const boardActive =
@@ -29,32 +52,56 @@ export default function AuthenticatedLayout({
     route().current("stories.show") ||
     route().current("tasks.index");
 
-  const historyActive =
-    route().current("history.index") ||
-    route().current("monitoring.epics") ||
-    route().current("monitoring.stories");
-
-  const adminUsersActive = route().current("admin.users.index");
-  const adminRolesActive = route().current("admin.roles.index");
-  const adminActive = adminUsersActive || adminRolesActive;
-
+  const historyActive = route().current("history.index");
   const monitoringActive = route().current("monitoring.index");
 
+  // admin flags
+  const adminUsersActive = route().current("admin.users.active");
+  const adminUsersPendingActive = route().current("admin.users.pending");
+  const adminRolesActive = route().current("admin.roles.index");
+
+  // Permissions
   const canManageBoards = can(auth, "manage_boards");
   const canManageRoles = can(auth, "manage_roles");
+  const canViewMonitoring = can(auth, "view_monitoring");
 
+  // UI state
   const [openCreateBoard, setOpenCreateBoard] = useState(false);
   const [boardOpen, setBoardOpen] = useState<boolean>(!!boardActive);
 
-  // current board uuid dari props (kalau halaman epics/show/story/tasks ngirim 'board')
+  const [adminUsersOpen, setAdminUsersOpen] = useState<boolean>(
+    !!(adminUsersActive || adminUsersPendingActive)
+  );
+
+  // Mobile hamburger state
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // current board uuid from props
   const currentBoardUuid = board?.uuid ?? null;
 
-  // auto-open dropdown saat lagi di halaman board-related
+  // auto-open dropdown when on board related pages
   useEffect(() => {
     if (boardActive) setBoardOpen(true);
   }, [boardActive]);
 
-  // global inertia exception handler
+  // auto-open admin users dropdown when inside users pages
+  useEffect(() => {
+    if (adminUsersActive || adminUsersPendingActive) setAdminUsersOpen(true);
+  }, [adminUsersActive, adminUsersPendingActive]);
+
+  // toast from flash alert
+  useEffect(() => {
+    const a = flash?.alert;
+    if (!a?.message) return;
+
+    toast({
+      type: a.type ?? "info",
+      message: a.message,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flash?.alert]);
+
+  // Global inertia exception handler
   useEffect(() => {
     const handler = (event: any) => {
       const status = event?.detail?.response?.status;
@@ -62,32 +109,40 @@ export default function AuthenticatedLayout({
       if (status === 401) {
         alert({
           title: "Unauthorized (401)",
-          description: "Sesi kamu mungkin habis. Silakan login ulang.",
+          description: "Your session has ended. Please log in again.",
           confirmText: "OK",
         });
       }
 
       if (status === 403) {
         alert({
-          title: "Akses ditolak (403)",
-          description: "Kamu tidak punya izin untuk melakukan aksi ini.",
+          title: "Access denied (403)",
+          description: "You don't have permission to perform this action.",
           confirmText: "OK",
         });
       }
 
       if (status === 419) {
         alert({
-          title: "Sesi habis (419)",
-          description: "CSRF/session expired. Silakan refresh halaman.",
+          title: "Session expired (419)",
+          description: "CSRF/session expired. Please refresh the page.",
           confirmText: "Refresh",
           onConfirm: () => window.location.reload(),
+        });
+      }
+
+      if (status === 404) {
+        alert({
+          title: "Page not found (404)",
+          description: "The page you are looking for was not found or has been moved.",
+          confirmText: "OK",
         });
       }
 
       if (typeof status === "number" && status >= 500) {
         alert({
           title: "Server error",
-          description: "Terjadi masalah di server. Coba lagi sebentar.",
+          description: "There was a server problem. Please try again.",
           confirmText: "OK",
         });
       }
@@ -97,17 +152,102 @@ export default function AuthenticatedLayout({
     return () => document.removeEventListener("inertia:exception", handler as any);
   }, [alert]);
 
+  const onLogout = () =>
+    confirm({
+      title: "Logout?",
+      description: "Are you sure you want to logout?",
+      confirmText: "Logout",
+      cancelText: "Cancel",
+      onConfirm: () => router.post(route("logout")),
+    });
+
+  const onNavigate = () => {
+    setMobileOpen(false);
+  };
+
+  // SidebarNav props (desktop + mobile)
+  const sidebarProps = useMemo(
+    () => ({
+      auth,
+      navBoards: navBoards ?? [],
+      currentBoardUuid,
+
+      boardActive,
+      boardOpen,
+      setBoardOpen,
+
+      dashboardActive,
+      historyActive,
+      monitoringActive,
+
+      adminUsersActive,
+      adminUsersPendingActive,
+      adminRolesActive,
+
+      adminUsersOpen,
+      setAdminUsersOpen,
+
+      pendingUsersCount: pendingCount ?? 0,
+
+      canManageBoards,
+      canManageRoles,
+      canViewMonitoring,
+
+      openCreateBoard,
+      setOpenCreateBoard,
+
+      onNavigate,
+    }),
+    [
+      auth,
+      navBoards,
+      currentBoardUuid,
+      boardActive,
+      boardOpen,
+      dashboardActive,
+      historyActive,
+      monitoringActive,
+      adminUsersActive,
+      adminUsersPendingActive,
+      adminRolesActive,
+      adminUsersOpen,
+      pendingCount,
+      canManageBoards,
+      canManageRoles,
+      canViewMonitoring,
+      openCreateBoard,
+    ]
+  );
+
+  // ✅ ESC to close right sidebar
+  useEffect(() => {
+    if (!rightSidebarOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCloseRightSidebar?.();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [rightSidebarOpen, onCloseRightSidebar]);
+
   return (
     <div className="h-screen w-full bg-gray-100 flex flex-col overflow-hidden">
       <FlashMessage />
+
+      <MobileSidebar
+        open={mobileOpen}
+        setOpen={setMobileOpen}
+        sidebarProps={sidebarProps}
+        onLogout={onLogout}
+      />
 
       {/* TOPBAR */}
       <div className="border-b bg-white">
         <div className="w-full px-6 py-3 flex items-center justify-between">
           <div className="font-semibold text-black">WebRepo</div>
-
           <div className="text-sm text-gray-600">
-            {auth?.user?.name} ({auth?.user?.role})
+            {auth?.user?.name} ({roleLabel(auth?.user)})
           </div>
         </div>
       </div>
@@ -116,168 +256,15 @@ export default function AuthenticatedLayout({
       <div className="flex-1 min-h-0">
         <div className="w-full px-6 py-6 h-full">
           <div className="flex gap-6 h-full min-h-0">
-            {/* LEFT SIDEBAR */}
-            <aside className="w-64 shrink-0 h-full">
+            {/* LEFT SIDEBAR (desktop only) */}
+            <aside className="hidden lg:block w-64 shrink-0 h-full">
               <div className="h-full flex flex-col justify-between rounded-lg bg-white p-4 shadow-sm">
-                {/* NAV */}
-                <nav className="flex flex-col gap-1 overflow-y-auto">
-                  {/* BOARD (klik toggle dropdown) */}
-                  <div className="flex flex-col">
-                    <button
-                      type="button"
-                      onClick={() => setBoardOpen((v) => !v)}
-                      className={[
-                        "rounded-md px-3 py-2 text-sm font-medium transition flex items-center justify-between",
-                        boardActive
-                          ? "bg-black text-white"
-                          : "text-gray-700 hover:bg-gray-100",
-                      ].join(" ")}
-                    >
-                      <span>Board</span>
-                      <span
-                        className={`transition-transform ${
-                          boardOpen ? "rotate-180" : ""
-                        }`}
-                      >
-                        ▾
-                      </span>
-                    </button>
-
-                    {/* Dropdown list board */}
-                    {boardOpen && (
-                      <div className="mt-2 rounded-md border border-gray-200 bg-gray-100/80 p-1.5">
-                        <div className="flex flex-col gap-1">
-                          {(navBoards ?? []).map((b: any) => {
-                            const uuid = b.uuid ?? null;
-                            const squadCode = b.squad_code ?? null;
-                            const isCurrent =
-                              !!currentBoardUuid && uuid === currentBoardUuid;
-
-                            return (
-                              <Link
-                                key={uuid}
-                                href={route("epics.index", { board: uuid })}
-                                title={squadCode ?? ""}
-                                className={[
-                                  "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
-                                  isCurrent
-                                    ? "bg-gray-200 text-gray-900 font-semibold"
-                                    : "text-gray-700 hover:bg-gray-200/70",
-                                ].join(" ")}
-                              >
-                                {/* dot */}
-                                <span
-                                  className={[
-                                    "h-1.5 w-1.5 rounded-full shrink-0",
-                                    isCurrent
-                                      ? "bg-gray-900"
-                                      : "bg-gray-500 group-hover:bg-gray-700",
-                                  ].join(" ")}
-                                />
-                                <span className="truncate">{b.title}</span>
-                              </Link>
-                            );
-                          })}
-
-                          {/* ADD BOARD */}
-                          <div className="mt-1 border-t border-gray-200 pt-1">
-                            <button
-                              type="button"
-                              onClick={() => setOpenCreateBoard(true)}
-                              disabled={!canManageBoards}
-                              className={[
-                                "w-full rounded-md px-3 py-2 text-left text-sm transition flex items-center justify-between",
-                                canManageBoards
-                                  ? "text-gray-700 hover:bg-gray-200/70"
-                                  : "text-gray-400 cursor-not-allowed",
-                              ].join(" ")}
-                              title={canManageBoards ? "Create board" : "PM only"}
-                            >
-                              <span className="flex items-center gap-2">
-                                <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
-                                Add Board
-                              </span>
-                              <span className="text-lg leading-none">+</span>
-                            </button>
-                          </div>
-
-                          <CreateBoardModal
-                            open={openCreateBoard}
-                            onClose={() => setOpenCreateBoard(false)}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* HISTORY */}
-                  <Link
-                    href={route("history.index")}
-                    className={[
-                      "rounded-md px-3 py-2 text-sm font-medium transition",
-                      historyActive
-                        ? "bg-black text-white"
-                        : "text-gray-700 hover:bg-gray-100",
-                    ].join(" ")}
-                  >
-                    History
-                  </Link>
-
-                  {/* MONITORING */}
-                  <Link
-                    href={route("monitoring.index")}
-                    className={[
-                      "rounded-md px-3 py-2 text-sm font-medium transition",
-                      monitoringActive
-                        ? "bg-black text-white"
-                        : "text-gray-700 hover:bg-gray-100",
-                    ].join(" ")}
-                  >
-                    Monitoring
-                  </Link>
-
-                  {/* ADMIN MENU */}
-                  {can(auth, "manage_boards") && (
-                    <Link
-                      href={route("admin.users.index")}
-                      className={[
-                        "rounded-md px-3 py-2 text-sm font-medium transition",
-                        adminUsersActive
-                          ? "bg-black text-white"
-                          : "text-gray-700 hover:bg-gray-100",
-                      ].join(" ")}
-                    >
-                      User Management
-                    </Link>
-                  )}
-
-                  {canManageRoles && (
-                    <Link
-                      href={route("admin.roles.index")}
-                      className={[
-                        "rounded-md px-3 py-2 text-sm font-medium transition",
-                        adminRolesActive
-                          ? "bg-black text-white"
-                          : "text-gray-700 hover:bg-gray-100",
-                      ].join(" ")}
-                    >
-                      Roles
-                    </Link>
-                  )}
-                </nav>
+                <SidebarNav {...sidebarProps} />
 
                 <div className="pt-4 border-t">
                   <button
                     type="button"
-                    onClick={() =>
-                      confirm({
-                        title: "Logout?",
-                        description: " Are you sure want to logout??",
-                        confirmText: "Logout",
-                        cancelText: "Cancle",
-                        onConfirm: () => router.post(route("logout")),
-                      })
-                    }
+                    onClick={onLogout}
                     className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition"
                   >
                     Logout
@@ -286,35 +273,71 @@ export default function AuthenticatedLayout({
               </div>
             </aside>
 
-            {/* MAIN CONTENT */}
-            <main className="min-w-0 flex-1 h-full min-h-0 overflow-y-auto">
-              <div className="pb-6">
-                {header && <div className="mb-4">{header}</div>}
-                {children}
-              </div>
-            </main>
+            {/* ✅ PUSH WRAPPER: MAIN + RIGHT (xl+) */}
+            <div className="relative flex min-w-0 flex-1 h-full min-h-0">
+              {/* MAIN CONTENT (full width when sidebar closed) */}
+              <main className="min-w-0 flex-1 h-full min-h-0 overflow-y-auto">
+                <div className="pb-6">
+                  {header && <div className="mb-4">{header}</div>}
+                  {children}
+                </div>
+              </main>
 
-            {/* RIGHT SIDEBAR */}
-            <div
-              className={[
-                "hidden xl:block shrink-0 h-full transition-all duration-300 ease-in-out",
-                rightSidebarOpen ? "w-[360px]" : "w-0",
-              ].join(" ")}
-            >
+              {/* ✅ RIGHT SIDEBAR (desktop push) */}
+              <aside
+                className={[
+                  "hidden xl:flex h-full shrink-0 transition-[width] duration-300 ease-in-out",
+                  rightSidebarOpen ? "w-[360px]" : "w-0",
+                ].join(" ")}
+                aria-hidden={!rightSidebarOpen}
+              >
+                <div
+                  className={[
+                    "h-full w-[360px] overflow-y-auto border-l bg-white",
+                    "transition-all duration-300 ease-in-out",
+                    rightSidebarOpen
+                      ? "opacity-100 translate-x-0"
+                      : "opacity-0 translate-x-4 pointer-events-none",
+                  ].join(" ")}
+                >
+                  {rightSidebar}
+                </div>
+              </aside>
+
+              {/* ✅ RIGHT SIDEBAR OVERLAY (mobile/tablet) */}
               <div
                 className={[
-                  "h-full overflow-y-auto transition-all duration-300 ease-in-out",
-                  rightSidebarOpen
-                    ? "opacity-100 translate-x-0"
-                    : "opacity-0 translate-x-4 pointer-events-none",
+                  "xl:hidden fixed inset-0 z-50",
+                  rightSidebarOpen ? "" : "pointer-events-none",
                 ].join(" ")}
               >
-                <div className="sticky top-0">{rightSidebar}</div>
+                {/* overlay */}
+                <div
+                  className={[
+                    "absolute inset-0 bg-black/40 transition-opacity duration-300",
+                    rightSidebarOpen ? "opacity-100" : "opacity-0",
+                  ].join(" ")}
+                  onClick={() => onCloseRightSidebar?.()}
+                />
+
+                {/* panel */}
+                <div
+                  className={[
+                    "absolute right-0 top-0 h-full w-[92%] max-w-[420px] bg-white shadow-xl",
+                    "transition-transform duration-300 ease-in-out",
+                    rightSidebarOpen ? "translate-x-0" : "translate-x-full",
+                  ].join(" ")}
+                >
+                  <div className="h-full p-3">{rightSidebar}</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Optional: spacing for floating button on mobile */}
+      <div className="lg:hidden h-16" />
     </div>
   );
 }

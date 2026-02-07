@@ -1,45 +1,28 @@
-import AuthenticatedLayout from "@/layouts/authenticated-layout";
 import { Head, usePage } from "@inertiajs/react";
+import { useMemo, useState } from "react";
 import route from "@/lib/route";
-import { useState } from "react";
+import AuthenticatedLayout from "@/layouts/authenticated-layout";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import Badge from "@/components/ui/Badge";
 import formatDateTime from "@/lib/date";
+import Badge from "@/components/ui/Badge";
 
 import TaskTable from "./TaskTable";
 import TaskFilter from "./TaskFilter";
-import CreateTaskModal from "./CreateTaskModal";
-import TaskDetailModal from "./TaskDetailModal";
 
-import { Story } from "@/types/story";
-import { Epic } from "@/types/epic";
+import type { Task } from "@/types/task";
+import type { Story } from "@/types/story";
+import type { Epic } from "@/types/epic";
+import { normalizeText, pickDefaultId } from "@/lib/master";
 
-type TaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
-type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
-type TaskType = "FE" | "BE" | "QA";
-
-export type Task = {
-  uuid: string;
-  code?: string | null;
-
-  type?: TaskType | null;
-  title: string;
-  description?: string | null;
-
-  status: TaskStatus;
-  priority: TaskPriority;
-
-  created_at: string;
-  updated_at: string;
-
-  creator?: { id: number; name: string };
-  assignee?: { id: number; name: string; role?: string };
-
-  story?: any;
-  epic?: any;
+type MasterItem = {
+  id: number;
+  key: string;
+  name: string;
+  is_default?: boolean;
 };
 
-function TaskBoard({
+export default function TaskBoard({
+  
   story,
   tasks,
   epic,
@@ -48,85 +31,102 @@ function TaskBoard({
   tasks: Task[];
   epic: Epic;
 }) {
-  const { auth }: any = usePage().props;
+  
+  const page = usePage<{
+    taskStatuses: MasterItem[];
+    taskPriorities: MasterItem[];
+  }>();
 
-  const role = auth?.user?.role;
-  const canCreate = ["PM", "SAD"].includes(role);
+  const taskStatuses = page.props.taskStatuses ?? [];
+  const taskPriorities = page.props.taskPriorities ?? [];
 
-  const [openCreate, setOpenCreate] = useState(false);
-  // const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const storyPriorityColor = (story as any).priorityMaster?.color ?? null;
+  const storyStatusColor = (story as any).statusMaster?.color ?? null;
+
+  const defaultStatusId = pickDefaultId(taskStatuses, "backlog");
+
+  const [q, setQ] = useState("");
+  const [statusId, setStatusId] = useState<number | null>(defaultStatusId);
+  const [priorityId, setPriorityId] = useState<number | null>(null);
+
+  const filtered = useMemo(() => {
+    const qq = normalizeText(q);
+
+    return (tasks ?? []).filter((t) => {
+      const matchQ =
+        !qq ||
+        normalizeText(t.title).includes(qq) ||
+        normalizeText(t.description).includes(qq) ||
+        normalizeText(t.code).includes(qq);
+
+      const tStatusId = t.status_id ?? t.statusMaster?.id ?? null;
+      const tPriorityId = t.priority_id ?? t.priorityMaster?.id ?? null;
+
+      const matchStatus = statusId == null ? true : tStatusId === statusId;
+      const matchPriority = priorityId == null ? true : tPriorityId === priorityId;
+
+      return matchQ && matchStatus && matchPriority;
+    });
+  }, [tasks, q, statusId, priorityId]);
+
+  const storyPriorityLabel =
+    (story as any).priorityMaster?.name ?? (story as any).priority ?? "-";
+  const storyStatusLabel =
+    (story as any).statusMaster?.name ?? (story as any).status ?? "-";
 
   return (
     <div className="space-y-4 h-full">
       {/* STORY SUMMARY */}
       <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
-        <div className="flex items-start justify-between gap-6">
-          <div className="flex-1">
-            <div className="flex items-baseline gap-3">
-              <div className="text-xl font-semibold text-gray-900">
-                {story.title}
-              </div>
-              <span className="text-sm font-medium text-gray-500">
-                {story.code}
-              </span>
-            </div>
+        <div className="flex items-baseline gap-3">
+          <div className="text-xl font-semibold text-gray-900">{story.title}</div>
+          <span className="text-sm font-medium text-gray-500">{story.code}</span>
+        </div>
 
-            {story.description && (
-              <p className="mt-2 text-sm">{story.description}</p>
-            )}
+        <div className="mt-4 flex items-start gap-6">
+          <div>
+            <div className="mb-1 text-xs text-gray-500">Priority</div>
+            <Badge variant={storyPriorityLabel as any} color={storyPriorityColor}>
+  {storyPriorityLabel}
+</Badge>
 
-            <div className="mt-4 flex items-start gap-6">
-              <div>
-                <div className="mb-1 text-xs text-gray-500">Priority</div>
-                <Badge variant={story.priority}>{story.priority}</Badge>
-              </div>
 
-              <div>
-                <div className="mb-1 text-xs text-gray-500">Status</div>
-                <Badge variant={story.status}>{story.status}</Badge>
-              </div>
-            </div>
 
-            <div className="mt-4 text-sm text-gray-600">
-              Updated: {story.updated_at ? formatDateTime(story.updated_at) : "-"}
-            </div>
-            <div className="mt-1 text-sm text-gray-600">
-              Created: {story.created_at ? formatDateTime(story.created_at) : "-"}
-            </div>
-            <div className="mt-1 text-sm text-gray-600">
-              StoryBy: {story.creator?.name ?? "-"}
-            </div>
-            <div className="mt-1 text-sm text-gray-600">
-              EpicBy: {epic.creator?.name ?? "-"}
-            </div>
           </div>
+
+          <div>
+            <div className="mb-1 text-xs text-gray-500">Status</div>
+            <Badge variant={storyStatusLabel as any} color={storyStatusColor}>
+  {storyStatusLabel}
+</Badge>
+          </div>
+        </div>
+
+        <div className="mt-4 text-sm text-gray-600">
+          Updated: {story.updated_at ? formatDateTime(story.updated_at) : "-"}
         </div>
       </div>
 
       {/* TASK TABLE CARD */}
       <div className="rounded-xl border bg-white shadow-sm">
-        <TaskFilter storyUuid={story.uuid} />
+        <TaskFilter
+          q={q}
+          onQ={setQ}
+          statusId={statusId}
+          onStatusId={setStatusId}
+          priorityId={priorityId}
+          onPriorityId={setPriorityId}
+          statuses={taskStatuses}
+          priorities={taskPriorities}
+          total={tasks?.length ?? 0}
+          shown={filtered.length}
+          storyUuid={story.uuid} //  tombol create di filter
+        />
 
         <div className="border-t" />
 
-        <TaskTable
-          tasks={tasks as any}
-          
-        />
+        <TaskTable tasks={filtered} />
       </div>
-
-     
-
-      <CreateTaskModal
-        open={openCreate}
-        onClose={() => setOpenCreate(false)}
-        storyUuid={story.uuid}
-      />
-
-      {/* <TaskDetailModal
-        task={selectedTask}
-        onClose={() => setSelectedTask(null)}
-      /> */}
     </div>
   );
 }
@@ -139,7 +139,6 @@ TaskBoard.layout = (page: any) => {
       header={
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
-
           <Breadcrumbs
             items={[
               { label: "Board", href: route("dashboard") },
@@ -155,5 +154,3 @@ TaskBoard.layout = (page: any) => {
     </AuthenticatedLayout>
   );
 };
-
-export default TaskBoard;

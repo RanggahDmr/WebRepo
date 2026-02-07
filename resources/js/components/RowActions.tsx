@@ -54,7 +54,7 @@ export default function RowActions({
 
     alert.confirm({
       title: confirmTitle,
-      description: confirmText, // ✅ kamu punya description, jadi ini aman
+      description: confirmText, //  kamu punya description, jadi ini aman
       confirmText: "Hapus",
       cancelText: "Batal",
       destructive: true,

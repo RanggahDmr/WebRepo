@@ -8,22 +8,26 @@ use Illuminate\Support\Str;
 
 class Story extends Model
 {
-    use HasFactory;
+   
 
-    protected $primaryKey = 'uuid';
-    public $incrementing = false;
-    protected $keyType = 'string';
+   protected $fillable = [
+  'uuid',
+  'epic_uuid',
+  'code',
+  'title',
+  'description',
 
-    protected $fillable = [
-        'uuid',
-        'epic_uuid',
-        'code',
-        'title',
-        'description',
-        'priority',
-        'status',
-        'created_by',
-    ];
+  // legacy
+  'priority',
+  'status',
+
+  // new master ids
+  'priority_id',
+  'status_id',
+
+  'created_by',
+];
+
 
     public function getRouteKeyName()
     {
@@ -49,4 +53,17 @@ class Story extends Model
     {
         return 'ST-' . strtoupper(Str::random(6));
     }
+  
+
+public function statusMaster()
+{
+    return $this->belongsTo(\App\Models\BoardStatus::class, 'status_id');
+}
+
+public function priorityMaster()
+{
+    return $this->belongsTo(\App\Models\BoardPriority::class, 'priority_id');
+}
+
+
 }

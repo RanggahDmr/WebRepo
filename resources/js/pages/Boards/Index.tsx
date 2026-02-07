@@ -6,6 +6,15 @@ import CreateBoardModal from "./CreateBoardModal";
 import { can } from "@/lib/can";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+
 type RoleLite = {
   id: number;
   slug: string;
@@ -30,6 +39,7 @@ type Props = {
   boards: Board[];
   users: UserOption[];
 };
+
 
 const roleLabel = (u: UserOption) => {
   const slugs = (u.roles ?? []).map((r) => r.slug);
@@ -99,7 +109,7 @@ export default function Index({ boards, users }: Props) {
     <AuthenticatedLayout
       header={
         <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold text-gray-900">Boards</div>
+          <div className="text-xl font-semibold text-gray-900">All Boards</div>
 
           {canManageBoards ? (
             <button
@@ -107,7 +117,7 @@ export default function Index({ boards, users }: Props) {
               onClick={() => setOpenCreate(true)}
               className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white"
             >
-              + Add Squad
+              + Add Board
             </button>
           ) : null}
         </div>
@@ -217,7 +227,7 @@ function BoardCard({
   return (
     <>
       <Link
-        href={route("boards.show", { board: board.uuid })} //epic.index -> boards.show
+        href={route("epics.index", { board: board.uuid })} //epic.index -> boards.show
         className="relative block rounded-xl border bg-white p-4 shadow-sm transition hover:shadow"
       >
         {/* top-right actions */}
@@ -293,18 +303,23 @@ function BoardCard({
               e.stopPropagation();
             }}
           >
-            <select
-              className="w-full rounded border px-2 py-1 text-sm"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-            >
-              <option value="">Select user…</option>
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({roleLabel(u)})
-                </option>
-              ))}
-            </select>
+           <Select
+  value={userId ? String(userId) : "NONE"}
+  onValueChange={(v) => setUserId(v === "NONE" ? "" : v)}
+>
+  <SelectTrigger className="h-9 w-full rounded-md text-sm">
+    <SelectValue placeholder="Select user…" />
+  </SelectTrigger>
+
+  <SelectContent className="max-h-64">
+    <SelectItem value="NONE">Select user…</SelectItem>
+    {availableUsers.map((u) => (
+      <SelectItem key={u.id} value={String(u.id)}>
+        {u.name} ({roleLabel(u)})
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
 
             <button
               type="button"

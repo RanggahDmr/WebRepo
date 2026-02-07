@@ -1,3 +1,6 @@
+// ... (SEMUA IMPORT & KODE SAMA persis seperti punyamu)
+// cukup ganti function groupKey saja (tapi aku kirim full file biar copas aman)
+
 import { router, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -135,7 +138,7 @@ export default function RolesIndex({
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                         <button
                           type="button"
                           onClick={() => openEdit(r)}
@@ -148,14 +151,14 @@ export default function RolesIndex({
                           type="button"
                           onClick={() => askDelete(r)}
                           disabled={r.slug === "admin"}
-                          className="rounded border border-red-600 px-3 py-1 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          className="w-full sm:w-auto rounded border border-red-600 px-3 py-1 text-red-600 hover:bg-red-50 disabled:opacity-50"
                         >
                           Delete
                         </button>
                       </div>
 
                       {r.slug === "admin" ? (
-                        <div className="mt-1 text-xs text-gray-400">
+                        <div className="mt-2 text-xs text-gray-400 sm:mt-1 sm:text-right">
                           Admin cannot be deleted.
                         </div>
                       ) : null}
@@ -272,6 +275,9 @@ function RoleFormModal({
   const groupKey = (key: string) => {
     const k = (key ?? "").toLowerCase();
 
+    // settings dulu biar gak ketimpa "board"
+    if (k.includes("setting")) return "Board Settings";
+
     if (k.includes("story")) return "Story";
     if (k.includes("epic")) return "Epic";
     if (k.includes("task")) return "Task";
@@ -285,7 +291,7 @@ function RoleFormModal({
     return "Other";
   };
 
-  // ✅ action order inside group (create/update/delete/view/manage/etc)
+  // ✅ action order inside group
   const actionWeight = (key: string) => {
     const k = (key ?? "").toLowerCase();
     if (k.startsWith("view")) return 1;
@@ -306,6 +312,7 @@ function RoleFormModal({
 
     const order = [
       "Board",
+      "Board Settings",
       "Members",
       "Epic",
       "Story",
@@ -334,12 +341,9 @@ function RoleFormModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* overlay */}
       <button className="absolute inset-0 bg-black/30" onClick={onClose} />
 
-      {/* ✅ modal: wider + safe height + internal scroll */}
       <div className="relative w-full max-w-5xl rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
-        {/* header */}
         <div className="flex items-start justify-between p-6 border-b">
           <div>
             <div className="text-lg font-semibold text-gray-900">
@@ -358,7 +362,6 @@ function RoleFormModal({
           </button>
         </div>
 
-        {/* ✅ body scroll */}
         <div className="p-6 overflow-y-auto">
           <form onSubmit={submit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
@@ -404,7 +407,6 @@ function RoleFormModal({
               ) : null}
             </div>
 
-            {/* ✅ grouped permissions */}
             <div className="md:col-span-2">
               <div className="text-sm font-medium text-gray-700">Permissions</div>
 

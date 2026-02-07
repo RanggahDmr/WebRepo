@@ -5,6 +5,15 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { Story } from "@/types/story";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+
 type FormData = {
   code: string;
   title: string;
@@ -96,38 +105,59 @@ export default function StoryEditModal({ story, onClose }: Props) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">
-              Priority
-            </label>
-            <select
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-              value={data.priority}
-              onChange={(e) =>
-                setData("priority", e.target.value as any)
-              }
-            >
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-            </select>
-          </div>
+  <label className="text-sm font-medium text-gray-700">Priority</label>
+
+  <Select
+    value={data.priority}
+    onValueChange={(v) => setData("priority", v as any)}
+  >
+    <SelectTrigger className="mt-1 h-10 w-full rounded-lg">
+      <SelectValue placeholder="Priority" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="LOW">LOW</SelectItem>
+      <SelectItem value="MEDIUM">MEDIUM</SelectItem>
+      <SelectItem value="HIGH">HIGH</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
+
+<div>
+  <label className="text-sm font-medium text-gray-700">Status</label>
+
+  <Select
+    value={data.status}
+    onValueChange={(v) => setData("status", v as any)}
+  >
+    <SelectTrigger className="mt-1 h-10 w-full rounded-lg">
+      <SelectValue placeholder="Status" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="TODO">TODO</SelectItem>
+      <SelectItem value="IN_PROGRESS">IN_PROGRESS</SelectItem>
+      <SelectItem value="DONE">DONE</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
+
 
           <div>
-            <label className="text-sm font-medium text-gray-700">
-              Status
-            </label>
-            <select
-              className="mt-1 w-full rounded-lg border px-3 py-2"
-              value={data.status}
-              onChange={(e) =>
-                setData("status", e.target.value as any)
-              }
-            >
-              <option value="TODO">TODO</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="DONE">DONE</option>
-            </select>
-          </div>
+  <label className="text-sm font-medium text-gray-700">Status</label>
+
+  <Select
+    value={data.status}
+    onValueChange={(v) => setData("status", v as any)}
+  >
+    <SelectTrigger className="mt-1 h-10 w-full rounded-lg">
+      <SelectValue placeholder="Status" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="TODO">TODO</SelectItem>
+      <SelectItem value="IN_PROGRESS">IN_PROGRESS</SelectItem>
+      <SelectItem value="DONE">DONE</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
         </div>
 
         <div className="flex justify-end gap-3 pt-4">

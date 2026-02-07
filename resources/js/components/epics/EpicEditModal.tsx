@@ -5,6 +5,15 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { Epic } from "@/types/epic";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+
 type FormData = {
   code: string;
   title: string;
@@ -81,30 +90,35 @@ export default function EpicEditModal({ epic, onClose }: Props) {
         />
 
         <div className="grid grid-cols-2 gap-4">
-          <select
-            className="rounded-lg border px-3 py-2"
-            value={data.priority}
-            onChange={(e) =>
-              setData("priority", e.target.value as Epic["priority"])
-            }
-          >
-            <option value="LOW">LOW</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="HIGH">HIGH</option>
-          </select>
+  <Select
+    value={data.priority}
+    onValueChange={(v) => setData("priority", v as Epic["priority"])}
+  >
+    <SelectTrigger className="h-10 rounded-lg">
+      <SelectValue placeholder="Priority" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="LOW">LOW</SelectItem>
+      <SelectItem value="MEDIUM">MEDIUM</SelectItem>
+      <SelectItem value="HIGH">HIGH</SelectItem>
+    </SelectContent>
+  </Select>
 
-          <select
-            className="rounded-lg border px-3 py-2"
-            value={data.status}
-            onChange={(e) =>
-              setData("status", e.target.value as Epic["status"])
-            }
-          >
-            <option value="TODO">TODO</option>
-            <option value="IN_PROGRESS">IN_PROGRESS</option>
-            <option value="DONE">DONE</option>
-          </select>
-        </div>
+  <Select
+    value={data.status}
+    onValueChange={(v) => setData("status", v as Epic["status"])}
+  >
+    <SelectTrigger className="h-10 rounded-lg">
+      <SelectValue placeholder="Status" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="TODO">TODO</SelectItem>
+      <SelectItem value="IN_PROGRESS">IN_PROGRESS</SelectItem>
+      <SelectItem value="DONE">DONE</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
+
 
         <div className="flex justify-end gap-3 pt-4">
           <Button variant="secondary" type="button" onClick={onClose}>

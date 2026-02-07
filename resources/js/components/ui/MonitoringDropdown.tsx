@@ -6,10 +6,10 @@ type Key = "tasks" | "stories" | "epics";
 
 export function MonitoringDropdown({
   current,
-  carry = ["board"], // filter yang dibawa antar tab
+  carry = ["board"],
 }: {
   current: Key;
-  carry?: Array<"board" | "epic">;
+  carry?: Array<"board" | "epic" | "role" | "status_id" | "priority_id">;
 }) {
   const { props }: any = usePage();
   const filters = props?.filters ?? {};
@@ -25,7 +25,6 @@ export function MonitoringDropdown({
     []
   );
 
-  // query minimal yang ikut kebawa
   const base: any = {};
   for (const k of carry) {
     if (filters?.[k]) base[k] = filters[k];
@@ -62,11 +61,8 @@ export function MonitoringDropdown({
             return (
               <Link
                 key={it.key}
-                href={route("monitoring.index")} 
-                data={{
-                  ...base,
-                  tab: it.key, 
-                }}
+                href={route("monitoring.index")}
+                data={{ ...base, tab: it.key }}
                 onClick={() => setOpen(false)}
                 preserveScroll
                 replace

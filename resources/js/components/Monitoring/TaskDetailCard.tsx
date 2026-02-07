@@ -32,64 +32,97 @@ export default function TaskDetailCard({ task, onClose }: Props) {
 
   const story = task.story;
   const epic = task.story?.epic;
+  const board = task.story?.epic?.board;
 
   const taskCode = task.code ?? `TSK-${shortUuid(task.uuid)}`;
-  const epicTitle = epic?.title ?? "-";
-  const storyTitle = story?.title ?? "-";
 
-  const epicCode = epic?.code ?? "-";
-  const storyCode = story?.code ?? "-";
+  const statusM = task.statusMaster ?? task.status_master ?? null;
+  const priorityM = task.priorityMaster ?? task.priority_master ?? null;
+
+  const statusLabel = statusM.name ?? "-";
+  const priorityLabel = priorityM.name ?? "-";
+
+  const statusVar = statusM?.key ?? task.status ?? "DEFAULT"
+  const priorityVar = priorityM.key ?? task.priority ?? "DEFAULT"
+
+  const statusColor = statusM.color ?? null;
+  const priorityColor = priorityM.color ?? null;
+
+  // const epicTitle = epic?.title ?? "-";
+  // const storyTitle = story?.title ?? "-";
+
+  // const epicCode = epic?.code ?? "-";
+  // const storyCode = story?.code ?? "-";
+
+  //  MVP: label dari master (fallback ke legacy)
+ 
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm border">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-xs font-medium text-gray-500">{taskCode}</div>
-          <div className="mt-1 text-2xl font-semibold text-gray-900 break-words">
-            {task.title ?? "-"}
+     <div className="h-full rounded-lg bg-white shadow-sm border flex flex-col">
+      {/* Header (sticky feel) */}
+      <div className="p-4 border-b">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-gray-500">{taskCode}</div>
+            <div className="mt-1 text-xl font-semibold text-gray-900 break-words">
+              {task.title ?? "-"}
+            </div>
+            <div className="mt-1 text-sm text-gray-700 break-words">
+              {task.description ?? "-"}
+            </div>
           </div>
-          <div className="mt-1 text-sm text-gray-900 break-words">
-            {task.description ?? "-"}
-          </div>
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+            >
+              Close
+            </button>
+          )}
         </div>
 
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
-          >
-            Close
-          </button>
-        )}
+        {/* Badges */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Badge variant={priorityVar} color={priorityColor}>
+            {priorityLabel}
+          </Badge>
+
+          <Badge variant={statusVar} color={statusColor}>
+            {statusLabel}
+          </Badge>
+
+          {task.type ? <Badge variant={task.type}>{task.type}</Badge> : null}
+        </div>
       </div>
 
-      {/* Badges */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {task.priority ? <Badge variant={task.priority}>{task.priority}</Badge> : null}
-        {task.status ? <Badge variant={task.status}>{task.status}</Badge> : null}
-        {task.type ? <Badge variant={task.type}>{task.type}</Badge> : null}
-      </div>
-
-      {/* Context */}
-      <div className="mt-4 space-y-3">
+      {/* Body scroll */}
+      <div className="p-4 overflow-y-auto space-y-3">
+        {/* Context */}
         <div className="rounded-md bg-gray-50 p-3">
           <div className="text-[11px] uppercase tracking-wide text-gray-500">
             Context
           </div>
 
           <div className="mt-2">
+            <div className="text-xs text-gray-500">Board</div>
+            <div className="mt-0.5 text-sm font-medium text-gray-900 break-words">
+              {board ? `${board.title ?? "-"} (${board.squad_code ?? "-"})` : "-"}
+            </div>
+          </div>
+
+          <div className="mt-3">
             <div className="text-xs text-gray-500">Epic</div>
             <div className="mt-0.5 text-sm font-medium text-gray-900 break-words">
-              {epic ? `${epicCode} — ${epicTitle}` : "-"}
+              {epic ? `${epic.code ?? "-"} — ${epic.title ?? "-"}` : "-"}
             </div>
           </div>
 
           <div className="mt-3">
             <div className="text-xs text-gray-500">Story</div>
             <div className="mt-0.5 text-sm font-medium text-gray-900 break-words">
-              {story ? `${storyCode} — ${storyTitle}` : "-"}
+              {story ? `${story.code ?? "-"} — ${story.title ?? "-"}` : "-"}
             </div>
           </div>
         </div>
