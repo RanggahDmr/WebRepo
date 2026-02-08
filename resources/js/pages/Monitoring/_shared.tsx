@@ -52,7 +52,7 @@ export function applyMonitoringFilter(
   );
 }
 
-/** ✅ Clean Select: Boards */
+/**  Clean Select: Boards */
 export function BoardSelect({
   tab,
   filters,
@@ -91,7 +91,7 @@ export function BoardSelect({
   );
 }
 
-/** ✅ Clean Select: Epics (tasks/stories only) */
+/**  Clean Select: Epics (tasks/stories only) */
 export function EpicSelect({
   tab,
   filters,

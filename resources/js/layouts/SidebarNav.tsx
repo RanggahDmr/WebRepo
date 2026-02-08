@@ -103,7 +103,7 @@ export default function SidebarNav({
                 );
               })}
 
-              {/* ✅ Board Settings (current board) */}
+              {/*  Board Settings (current board) */}
              {currentBoardUuid && canManageSettings && (
                   <>
                     <div className="mt-1 border-t border-gray-200 pt-1" />

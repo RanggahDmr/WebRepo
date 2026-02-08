@@ -271,7 +271,7 @@ function RoleFormModal({
 
   const disableSlug = editing?.slug === "admin";
 
-  // ✅ grouping helper
+  //  grouping helper
   const groupKey = (key: string) => {
     const k = (key ?? "").toLowerCase();
 
@@ -291,7 +291,7 @@ function RoleFormModal({
     return "Other";
   };
 
-  // ✅ action order inside group
+  //  action order inside group
   const actionWeight = (key: string) => {
     const k = (key ?? "").toLowerCase();
     if (k.startsWith("view")) return 1;

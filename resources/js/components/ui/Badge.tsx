@@ -20,7 +20,7 @@ export default function Badge({
   const className =
     styles[variant] ?? "bg-gray-100 text-gray-700";
 
-  // ✅ kalau color dari DB ada, override background
+  //  kalau color dari DB ada, override background
   const style = color
     ? {
         backgroundColor: color,

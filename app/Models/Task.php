@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Task extends Model
 {
-    // ✅ JANGAN ubah primaryKey jika table masih punya id
+    //  JANGAN ubah primaryKey jika table masih punya id
     // cukup gunakan getRouteKeyName untuk route model binding uuid
     public function getRouteKeyName()
     {
@@ -18,7 +18,7 @@ class Task extends Model
         'story_uuid',
         'code',
 
-        // ✅ master ids
+        //  master ids
         'priority_id',
         'status_id',
 

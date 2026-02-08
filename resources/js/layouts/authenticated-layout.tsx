@@ -219,7 +219,7 @@ export default function AuthenticatedLayout({
     ]
   );
 
-  // ✅ ESC to close right sidebar
+  //  ESC to close right sidebar
   useEffect(() => {
     if (!rightSidebarOpen) return;
 
@@ -273,7 +273,6 @@ export default function AuthenticatedLayout({
               </div>
             </aside>
 
-            {/* ✅ PUSH WRAPPER: MAIN + RIGHT (xl+) */}
             <div className="relative flex min-w-0 flex-1 h-full min-h-0">
               {/* MAIN CONTENT (full width when sidebar closed) */}
               <main className="min-w-0 flex-1 h-full min-h-0 overflow-y-auto">
@@ -283,7 +282,7 @@ export default function AuthenticatedLayout({
                 </div>
               </main>
 
-              {/* ✅ RIGHT SIDEBAR (desktop push) */}
+           
               <aside
                 className={[
                   "hidden xl:flex h-full shrink-0 transition-[width] duration-300 ease-in-out",
@@ -304,7 +303,7 @@ export default function AuthenticatedLayout({
                 </div>
               </aside>
 
-              {/* ✅ RIGHT SIDEBAR OVERLAY (mobile/tablet) */}
+              {/*  RIGHT SIDEBAR OVERLAY (mobile/tablet) */}
               <div
                 className={[
                   "xl:hidden fixed inset-0 z-50",

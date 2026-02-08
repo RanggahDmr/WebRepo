@@ -48,7 +48,7 @@ export default function ProgressBar({
 
   const byStatus = (progress.by_status ?? []).filter((s) => Number(s?.count ?? 0) > 0);
 
-  // ✅ fallback jika belum ada by_status
+  //  fallback jika belum ada by_status
   const items: ProgressStatus[] =
     byStatus.length > 0
       ? byStatus
