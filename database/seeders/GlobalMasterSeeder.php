@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class GlobalMasterSeeder extends Seeder
 {
@@ -13,11 +14,6 @@ class GlobalMasterSeeder extends Seeder
 
         /**
          * STATUS per scope
-         * - key: stable identifier (snake_case)
-         * - name: label UI
-         * - sort_order: urutan
-         * - is_done: untuk progress done/open
-         * - is_active: hide/retire tanpa delete
          */
         $statusesByScope = [
             'EPIC' => [
@@ -39,7 +35,7 @@ class GlobalMasterSeeder extends Seeder
         ];
 
         /**
-         * PRIORITY per scope (kamu bisa samain semua scope)
+         * PRIORITY per scope
          */
         $prioritiesByScope = [
             'EPIC' => [
@@ -59,64 +55,79 @@ class GlobalMasterSeeder extends Seeder
             ],
         ];
 
-        // 1) Seed global_statuses
-        foreach ($statusesByScope as $scope => $rows) {
-            foreach ($rows as $r) {
-                DB::table('global_statuses')->updateOrInsert(
-                    ['scope' => $scope, 'key' => $r['key']],
+        // ---- IF EXISTS guards ----
+        $hasStatuses   = Schema::hasTable('global_statuses');
+        $hasPriorities = Schema::hasTable('global_priorities');
+        $hasDefaults   = Schema::hasTable('global_defaults');
+
+        // 1) Seed global_statuses (if exists)
+        if ($hasStatuses) {
+            foreach ($statusesByScope as $scope => $rows) {
+                foreach ($rows as $r) {
+                    DB::table('global_statuses')->updateOrInsert(
+                        ['scope' => $scope, 'key' => $r['key']],
+                        [
+                            'name' => $r['name'],
+                            'color' => null,
+                            'sort_order' => $r['sort_order'],
+                            'is_done' => $r['is_done'],
+                            'is_active' => $r['is_active'],
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]
+                    );
+                }
+            }
+        }
+
+        // 2) Seed global_priorities (if exists)
+        if ($hasPriorities) {
+            foreach ($prioritiesByScope as $scope => $rows) {
+                foreach ($rows as $r) {
+                    DB::table('global_priorities')->updateOrInsert(
+                        ['scope' => $scope, 'key' => $r['key']],
+                        [
+                            'name' => $r['name'],
+                            'color' => null,
+                            'sort_order' => $r['sort_order'],
+                            'is_active' => $r['is_active'],
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]
+                    );
+                }
+            }
+        }
+
+        // 3) Seed global_defaults per scope (if exists + dependencies exist)
+        // Butuh global_statuses & global_priorities juga biar bisa ambil id default.
+        if ($hasDefaults && $hasStatuses && $hasPriorities) {
+            foreach (array_keys($statusesByScope) as $scope) {
+                $defaultStatusId = DB::table('global_statuses')
+                    ->where('scope', $scope)
+                    ->where('key', 'todo')
+                    ->value('id');
+
+                $defaultPriorityId = DB::table('global_priorities')
+                    ->where('scope', $scope)
+                    ->where('key', 'medium')
+                    ->value('id');
+
+                // kalau salah satu belum ada, skip biar gak nyimpen null yg bikin constraint error
+                if (! $defaultStatusId || ! $defaultPriorityId) {
+                    continue;
+                }
+
+                DB::table('global_defaults')->updateOrInsert(
+                    ['scope' => $scope],
                     [
-                        'name' => $r['name'],
-                        'color' => null, // nanti bisa kamu set
-                        'sort_order' => $r['sort_order'],
-                        'is_done' => $r['is_done'],
-                        'is_active' => $r['is_active'],
+                        'default_status_id' => $defaultStatusId,
+                        'default_priority_id' => $defaultPriorityId,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]
                 );
             }
-        }
-
-        // 2) Seed global_priorities
-        foreach ($prioritiesByScope as $scope => $rows) {
-            foreach ($rows as $r) {
-                DB::table('global_priorities')->updateOrInsert(
-                    ['scope' => $scope, 'key' => $r['key']],
-                    [
-                        'name' => $r['name'],
-                        'color' => null,
-                        'sort_order' => $r['sort_order'],
-                        'is_active' => $r['is_active'],
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]
-                );
-            }
-        }
-
-        // 3) Seed global_defaults per scope
-        // Default status: todo
-        // Default priority: medium
-        foreach (array_keys($statusesByScope) as $scope) {
-            $defaultStatusId = DB::table('global_statuses')
-                ->where('scope', $scope)
-                ->where('key', 'todo')
-                ->value('id');
-
-            $defaultPriorityId = DB::table('global_priorities')
-                ->where('scope', $scope)
-                ->where('key', 'medium')
-                ->value('id');
-
-            DB::table('global_defaults')->updateOrInsert(
-                ['scope' => $scope],
-                [
-                    'default_status_id' => $defaultStatusId,
-                    'default_priority_id' => $defaultPriorityId,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]
-            );
         }
     }
 }

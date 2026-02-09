@@ -436,10 +436,7 @@ abort_unless(...);
         'incoming_status_id' => $validated['status_id'],
     ]);
            $newStatusId = $this->validateBoardStatusId($epic->board_uuid, 'EPIC', $validated['status_id']);
-  \Log::info('EPIC UPDATE VALIDATED_STATUS_RESULT', [
-        'incoming_status_id' => $validated['status_id'],
-        'new_status_id' => $newStatusId,
-    ]);
+
             if (!$newStatusId) {
                 return back()->with('alert', [
                     'type' => 'error',

@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Role;
 
@@ -11,6 +13,11 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
+        // Guard: minimal tables must exist
+        if (!Schema::hasTable('users') || !Schema::hasTable('roles')) {
+            return;
+        }
+
         // pastiin role admin ada (dari RbacSeeder harusnya sudah ada)
         $adminRole = Role::firstOrCreate(
             ['slug' => 'admin'],
@@ -29,10 +36,23 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        // attach role admin via pivot user_roles
-        $admin->roles()->syncWithoutDetaching([$adminRole->id]);
+        // attach role admin via pivot (if exists + relation exists)
+        $hasPivot =
+            Schema::hasTable('user_roles') ||      // common
+            Schema::hasTable('role_user') ||       // laravel default
+            Schema::hasTable('user_role') ||       // alt
+            Schema::hasTable('users_roles');       // alt
 
-        // optional: kalau kamu masih punya kolom legacy users.role, isi biar gak bikin bingung UI lama
-        // $admin->forceFill(['role' => 'ADMIN'])->save();
+        $userHasRolesRel = method_exists(User::class, 'roles');
+
+        if ($hasPivot && $userHasRolesRel) {
+            $admin->roles()->syncWithoutDetaching([$adminRole->id]);
+        }
+
+        // optional legacy column users.role (if exists)
+        if (Schema::hasColumn('users', 'role')) {
+            // kalau UI lama masih baca users.role
+            $admin->forceFill(['role' => 'ADMIN'])->save();
+        }
     }
 }

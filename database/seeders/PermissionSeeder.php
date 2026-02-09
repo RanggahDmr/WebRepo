@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Permission;
 use App\Models\Role;
 
@@ -43,22 +44,47 @@ class PermissionSeeder extends Seeder
             ['name' => 'Manage Global Defaults', 'key' => 'manage_global_defaults'],
         ];
 
-        foreach ($permissions as $p) {
-            Permission::firstOrCreate(
-                ['key' => $p['key']],
-                ['name' => $p['name'], 'description' => $p['description'] ?? null]
-            );
+        // if permissions table exists
+        if (Schema::hasTable('permissions')) {
+            foreach ($permissions as $p) {
+                Permission::firstOrCreate(
+                    ['key' => $p['key']],
+                    ['name' => $p['name'], 'description' => $p['description'] ?? null]
+                );
+            }
         }
 
-        // attach all permissions to admin roles (safe)
+        // attach to roles only if the needed tables exist
+        $canAttach =
+            Schema::hasTable('roles') &&
+            Schema::hasTable('permissions') &&
+            (
+                Schema::hasTable('permission_role') || // common pivot name
+                Schema::hasTable('role_permission') || // alt pivot name
+                Schema::hasTable('role_permissions') || // alt pivot name
+                Schema::hasTable('permission_roles')    // alt pivot name
+            );
+
+        if (! $canAttach) {
+            return;
+        }
+
         $allPermissionIds = Permission::pluck('id')->all();
 
-        // if you use 'super_admin'
-        $super = Role::firstOrCreate(['slug' => 'super_admin'], ['name' => 'Super Admin']);
-        $super->permissions()->syncWithoutDetaching($allPermissionIds);
+        // Only attach if the relationship exists on Role model
+        // (prevents error if Role doesn't define permissions())
+        $roleHasPermissionsRel = method_exists(Role::class, 'permissions');
 
-        // if you use 'admin'
+        // super_admin
+        $super = Role::firstOrCreate(['slug' => 'super_admin'], ['name' => 'Super Admin']);
+        if ($roleHasPermissionsRel) {
+            $super->permissions()->syncWithoutDetaching($allPermissionIds);
+        }
+
+        // admin
         $admin = Role::firstOrCreate(['slug' => 'admin'], ['name' => 'Admin']);
-        $admin->permissions()->syncWithoutDetaching($allPermissionIds);
+        if ($roleHasPermissionsRel) {
+            $admin->permissions()->syncWithoutDetaching($allPermissionIds);
+        }
     }
 }
