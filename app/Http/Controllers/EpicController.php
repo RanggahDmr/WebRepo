@@ -11,6 +11,8 @@ use App\Models\GlobalStatus;
 use App\Models\GlobalDefault;
 use App\Models\GlobalPriority;
 
+use Illuminate\Support\Facades\Log;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -387,6 +389,7 @@ private function mapGlobalPriorityToBoardPriorityId(string $boardUuid, string $s
      */
     public function update(Request $request, Epic $epic)
     {
+        
         $epic->load('board');
         $board = $epic->board;
 
@@ -398,6 +401,12 @@ private function mapGlobalPriorityToBoardPriorityId(string $boardUuid, string $s
         }
 
         if ($resp = $this->ensureBoardMember($request, $board)) return $resp;
+        Log::info('EPIC UPDATE PRE-AUTH', [
+  'user_id' => $request->user()?->id,
+  'can_update_epic' => $request->user()?->hasPermission('update_epic'),
+]);
+abort_unless(...);
+
 
         abort_unless($request->user()?->hasPermission('update_epic'), 403);
 
@@ -408,12 +417,29 @@ private function mapGlobalPriorityToBoardPriorityId(string $boardUuid, string $s
             'status_id' => ['sometimes', 'nullable', 'integer'],
             'priority_id' => ['sometimes', 'nullable', 'integer'],
         ]);
+        \Log::info('EPIC UPDATE VALIDATED', [
+    'epic_uuid' => $epic->uuid,
+    'validated' => $validated,
+    'raw' => $request->all(),
+]);
+\Log::info('EPIC UPDATE EMPTY_CHECK', [
+    'is_empty' => empty($validated),
+]);
+
 
         if (empty($validated)) return back();
 
         if (array_key_exists('status_id', $validated)) {
+             \Log::info('EPIC UPDATE WILL_VALIDATE_STATUS', [
+        'epic_uuid' => $epic->uuid,
+        'board_uuid' => $epic->board_uuid,
+        'incoming_status_id' => $validated['status_id'],
+    ]);
            $newStatusId = $this->validateBoardStatusId($epic->board_uuid, 'EPIC', $validated['status_id']);
-
+  \Log::info('EPIC UPDATE VALIDATED_STATUS_RESULT', [
+        'incoming_status_id' => $validated['status_id'],
+        'new_status_id' => $newStatusId,
+    ]);
             if (!$newStatusId) {
                 return back()->with('alert', [
                     'type' => 'error',
@@ -434,13 +460,19 @@ private function mapGlobalPriorityToBoardPriorityId(string $boardUuid, string $s
             }
             $validated['priority_id'] = $newPriorityId;
         }
+        
+foreach ($validated as $k => $v) {
+    $epic->{$k} = $v;
+}
 
-        $epic->update($validated);
+$epic->save();
 
-        return back()->with('alert', [
-            'type' => 'success',
-            'message' => 'Epic updated.',
-        ]);
+return back()->with('alert', [
+    'type' => 'success',
+    'message' => 'Epic updated.',
+]);
+
+        
     }
 
     /**
