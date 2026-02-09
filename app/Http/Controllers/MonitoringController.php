@@ -28,7 +28,6 @@ class MonitoringController extends Controller
             'tab',
             'board',
             'epic',          // only tasks/stories
-            'role',
             'status_id',
             'priority_id',
             'sort',
@@ -40,9 +39,7 @@ class MonitoringController extends Controller
         // dropdown
         $boards = Board::query()
             ->orderBy('title')
-            ->get(['uuid', 'title', 'squad_code']);
-
-        $roles = User::select('role')->distinct()->pluck('role');
+            ->get(['uuid', 'title']);
 
         $epicsOptions = Epic::query()
             ->when($request->board, fn($q, $boardUuid) => $q->where('board_uuid', $boardUuid))
@@ -133,7 +130,6 @@ logger()->info('MONITORING_TASK_DEBUG', [
                 'progress' => $progress,
                 'filters' => $filters,
 
-                'roles' => $roles,
                 'boards' => $boards,
                 'epicsOptions' => $epicsOptions,
 
@@ -194,7 +190,6 @@ logger()->info('MONITORING_TASK_DEBUG', [
                 'progress' => $progress,
                 'filters' => $filters,
 
-                'roles' => $roles,
                 'boards' => $boards,
                 'epicsOptions' => $epicsOptions,
 
@@ -241,7 +236,7 @@ logger()->info('MONITORING_TASK_DEBUG', [
         $epics = $list->paginate(5)->withQueryString();
 
         $progress = $this->buildProgressByStatus($base, 'epics');
-          
+
 
         return Inertia::render('Monitoring/Epics', [
             'tab' => $tab,
@@ -251,7 +246,6 @@ logger()->info('MONITORING_TASK_DEBUG', [
             'progress' => $progress,
             'filters' => $filters,
 
-            'roles' => $roles,
             'boards' => $boards,
             'epicsOptions' => $epicsOptions,
 
