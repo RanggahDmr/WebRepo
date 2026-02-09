@@ -3,6 +3,8 @@
 namespace App\Observers;
 
 use App\Models\Board;
+use App\Models\BoardStatus;
+use App\Models\BoardPriority;
 use Illuminate\Support\Facades\DB;
 
 class BoardObserver
@@ -10,27 +12,58 @@ class BoardObserver
     public function created(Board $board): void
     {
         DB::transaction(function () use ($board) {
+            $scopes = ['EPIC', 'STORY', 'TASK'];
 
-            /**
-             *  NEW RULE:
-             * - Board tidak lagi punya master status/priority sendiri.
-             * - Default status/priority diambil dari global_defaults per scope.
-             * - Jadi saat board dibuat, tidak perlu seed apa pun ke board_statuses/board_priorities.
-             */
+            foreach ($scopes as $scope) {
+                // ===== copy global_statuses -> board_statuses =====
+                $gStatuses = DB::table('global_statuses')
+                    ->where('scope', $scope)
+                    ->where('is_active', 1)
+                    ->orderBy('sort_order')
+                    ->get(['key', 'name', 'color', 'sort_order', 'is_done']);
 
-            // (Opsional) Auto-add creator sebagai member board
-            // Sesuaikan kalau struktur pivot board_members kamu beda.
-            // Kalau BoardController kamu sudah handle ini, boleh hapus blok ini.
-            if (!empty($board->created_by)) {
-                $exists = $board->members()
-                    ->where('users.id', $board->created_by)
-                    ->exists();
+                foreach ($gStatuses as $gs) {
+                    BoardStatus::firstOrCreate(
+                        [
+                            'board_uuid' => $board->uuid,
+                            'scope' => $scope,
+                            'key' => $gs->key,
+                        ],
+                        [
+                            'name' => $gs->name,
+                            'position' => (int) ($gs->sort_order ?? 0),
+                            'color' => $gs->color,
+                            'is_done' => (bool) $gs->is_done,
+                            'is_active' => true,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    );
+                }
 
-                if (!$exists) {
-                    $board->members()->attach($board->created_by, [
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                // ===== copy global_priorities -> board_priorities =====
+                $gPriorities = DB::table('global_priorities')
+                    ->where('scope', $scope)
+                    ->where('is_active', 1)
+                    ->orderBy('sort_order')
+                    ->get(['key', 'name', 'color', 'sort_order']);
+
+                foreach ($gPriorities as $gp) {
+                    BoardPriority::firstOrCreate(
+                        [
+                            'board_uuid' => $board->uuid,
+                            'scope' => $scope,
+                            'key' => $gp->key,
+                        ],
+                        [
+                            'name' => $gp->name,
+                            'position' => (int) ($gp->sort_order ?? 0),
+                            'color' => $gp->color,
+                            'is_active' => true,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    );
                 }
             }
         });

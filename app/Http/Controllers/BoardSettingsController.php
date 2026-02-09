@@ -61,7 +61,7 @@ class BoardSettingsController extends Controller
             ->get();
 
         return Inertia::render('Boards/Settings', [
-            'board' => $board->only(['uuid', 'title',  'created_at']),
+            'board' => $board->only(['uuid', 'title', 'created_at']),
             'canManageSettings' => $canManage,
             'scopes' => $this->scopes,
             'statuses' => $statuses,
@@ -83,11 +83,8 @@ class BoardSettingsController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
             'color' => ['nullable', 'string', 'max:255'],
-
-            'is_default' => ['boolean'],
-            'is_done' => ['boolean'],
-            'is_locked' => ['boolean'],
-            'is_active' => ['boolean'],
+            'is_done' => ['nullable', 'boolean'],
+            'is_active' => ['nullable', 'boolean'],
         ]);
 
         // unique per board+scope+key
@@ -109,27 +106,16 @@ class BoardSettingsController extends Controller
             ->where('scope', $data['scope'])
             ->max('position');
 
-        $status = BoardStatus::create([
+        BoardStatus::create([
             'board_uuid' => $board->uuid,
             'scope' => $data['scope'],
             'key' => $data['key'],
             'name' => $data['name'],
             'position' => $data['position'] ?? (($nextPos ?? -1) + 1),
-             'color' => $data['color'] ?? $this->randomNiceColor(),
-            'is_default' => (bool)($data['is_default'] ?? false),
+            'color' => $data['color'] ?? $this->randomNiceColor(),
             'is_done' => (bool)($data['is_done'] ?? false),
-            'is_locked' => (bool)($data['is_locked'] ?? false),
             'is_active' => (bool)($data['is_active'] ?? true),
         ]);
-
-        // ensure single default per scope
-        if ($status->is_default) {
-            BoardStatus::query()
-                ->where('board_uuid', $board->uuid)
-                ->where('scope', $status->scope)
-                ->where('id', '!=', $status->id)
-                ->update(['is_default' => false]);
-        }
 
         return back()->with('alert', [
             'type' => 'success',
@@ -142,24 +128,15 @@ class BoardSettingsController extends Controller
         if ($resp = $this->ensureMember($request, $board)) return $resp;
         abort_unless($this->canManage($request), 403);
 
-        // security: ensure belongs to board
+        // ensure belongs to board
         abort_unless($status->board_uuid === $board->uuid, 404);
-
-        if ($status->is_locked) {
-            return back()->with('alert', [
-                'type' => 'error',
-                'message' => 'This status is locked.',
-            ]);
-        }
 
         $data = $request->validate([
             'key' => ['sometimes', 'required', 'string', 'max:255'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'position' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'color' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'is_default' => ['sometimes', 'boolean'],
             'is_done' => ['sometimes', 'boolean'],
-            'is_locked' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
@@ -181,14 +158,6 @@ class BoardSettingsController extends Controller
 
         $status->update($data);
 
-        if (array_key_exists('is_default', $data) && $data['is_default']) {
-            BoardStatus::query()
-                ->where('board_uuid', $board->uuid)
-                ->where('scope', $status->scope)
-                ->where('id', '!=', $status->id)
-                ->update(['is_default' => false]);
-        }
-
         return back()->with('alert', [
             'type' => 'success',
             'message' => 'Status updated.',
@@ -201,13 +170,6 @@ class BoardSettingsController extends Controller
         abort_unless($this->canManage($request), 403);
 
         abort_unless($status->board_uuid === $board->uuid, 404);
-
-        if ($status->is_locked) {
-            return back()->with('alert', [
-                'type' => 'error',
-                'message' => 'This status is locked.',
-            ]);
-        }
 
         $status->delete();
 
@@ -232,8 +194,7 @@ class BoardSettingsController extends Controller
             'level' => ['nullable', 'integer', 'min:0'],
             'position' => ['nullable', 'integer', 'min:0'],
             'color' => ['nullable', 'string', 'max:255'],
-     
-            'is_active' => ['boolean'],
+            'is_active' => ['nullable', 'boolean'],
         ]);
 
         $exists = BoardPriority::query()
@@ -254,25 +215,16 @@ class BoardSettingsController extends Controller
             ->where('scope', $data['scope'])
             ->max('position');
 
-        $prio = BoardPriority::create([
+        BoardPriority::create([
             'board_uuid' => $board->uuid,
             'scope' => $data['scope'],
             'key' => $data['key'],
             'name' => $data['name'],
             'level' => $data['level'] ?? 0,
             'position' => $data['position'] ?? (($nextPos ?? -1) + 1),
-             'color' => $data['color'] ?? $this->randomNiceColor(),
-        
+            'color' => $data['color'] ?? $this->randomNiceColor(),
             'is_active' => (bool)($data['is_active'] ?? true),
         ]);
-
-        if ($prio->is_default) {
-            BoardPriority::query()
-                ->where('board_uuid', $board->uuid)
-                ->where('scope', $prio->scope)
-                ->where('id', '!=', $prio->id)
-                ->update(['is_default' => false]);
-        }
 
         return back()->with('alert', [
             'type' => 'success',
@@ -287,21 +239,12 @@ class BoardSettingsController extends Controller
 
         abort_unless($priority->board_uuid === $board->uuid, 404);
 
-        if ($priority->is_locked) {
-            return back()->with('alert', [
-                'type' => 'error',
-                'message' => 'This priority is locked.',
-            ]);
-        }
-
         $data = $request->validate([
             'key' => ['sometimes', 'required', 'string', 'max:255'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'level' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'position' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'color' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'is_default' => ['sometimes', 'boolean'],
-            'is_locked' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
@@ -322,14 +265,6 @@ class BoardSettingsController extends Controller
 
         $priority->update($data);
 
-        if (array_key_exists('is_default', $data) && $data['is_default']) {
-            BoardPriority::query()
-                ->where('board_uuid', $board->uuid)
-                ->where('scope', $priority->scope)
-                ->where('id', '!=', $priority->id)
-                ->update(['is_default' => false]);
-        }
-
         return back()->with('alert', [
             'type' => 'success',
             'message' => 'Priority updated.',
@@ -343,13 +278,6 @@ class BoardSettingsController extends Controller
 
         abort_unless($priority->board_uuid === $board->uuid, 404);
 
-        if ($priority->is_locked) {
-            return back()->with('alert', [
-                'type' => 'error',
-                'message' => 'This priority is locked.',
-            ]);
-        }
-
         $priority->delete();
 
         return back()->with('alert', [
@@ -357,27 +285,15 @@ class BoardSettingsController extends Controller
             'message' => 'Priority deleted.',
         ]);
     }
+
     private function randomNiceColor(): string
-{
-    // Vibrant palette (no gray)
-    $colors = [
-        '#7C3AED', // violet
-        '#6D28D9', // deep violet
-        '#4F46E5', // indigo
-        '#2563EB', // blue
-        '#0EA5E9', // sky
-        '#06B6D4', // cyan
-        '#10B981', // emerald
-        '#22C55E', // green
-        '#F59E0B', // amber
-        '#F97316', // orange
-        '#EF4444', // red
-        '#F43F5E', // rose
-        '#EC4899', // pink
-    ];
+    {
+        $colors = [
+            '#7C3AED', '#6D28D9', '#4F46E5', '#2563EB', '#0EA5E9',
+            '#06B6D4', '#10B981', '#22C55E', '#F59E0B', '#F97316',
+            '#EF4444', '#F43F5E', '#EC4899',
+        ];
 
-    return $colors[array_rand($colors)];
-}
-
-
+        return $colors[array_rand($colors)];
+    }
 }
