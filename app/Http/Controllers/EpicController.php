@@ -5,6 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Board;
 use App\Models\Epic;
 use App\Models\Story;
+use App\Models\BoardStatus;
+use App\Models\BoardPriority;
+use App\Models\GlobalStatus;
+use App\Models\GlobalDefault;
+use App\Models\GlobalPriority;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -43,6 +49,7 @@ class EpicController extends Controller
     /**
      * Global masters untuk scope tertentu (EPIC/STORY/TASK)
      */
+    
     private function getMasters(string $scope): array
     {
         $statuses = DB::table('global_statuses')
@@ -67,48 +74,30 @@ class EpicController extends Controller
     /**
      * Default global untuk scope tertentu
      */
-    private function getGlobalDefaults(string $scope): array
-    {
-        $row = DB::table('global_defaults')
-            ->where('scope', $scope)
-            ->first(['default_status_id', 'default_priority_id']);
+   private function getGlobalDefaultKeys(string $scope): array
+{
+    $row = DB::table('global_defaults')
+        ->where('scope', $scope)
+        ->first(['default_status_id', 'default_priority_id']);
 
-        return [
-            'status_id' => $row?->default_status_id,
-            'priority_id' => $row?->default_priority_id,
-        ];
+    if (!$row?->default_status_id || !$row?->default_priority_id) {
+        return ['status_key' => null, 'priority_key' => null];
     }
 
-    private function validateGlobalStatusId(string $scope, ?int $statusId): ?int
-    {
-        if (!$statusId) return null;
+    $statusKey = DB::table('global_statuses')
+        ->where('id', $row->default_status_id)
+        ->value('key');
 
-        $valid = DB::table('global_statuses')
-            ->where('id', $statusId)
-            ->where('scope', $scope)
-            ->where('is_active', true)
-            ->value('id');
+    $priorityKey = DB::table('global_priorities')
+        ->where('id', $row->default_priority_id)
+        ->value('key');
 
-        return $valid ?: null;
-    }
+    return [
+        'status_key' => $statusKey,
+        'priority_key' => $priorityKey,
+    ];
+}
 
-    private function validateGlobalPriorityId(string $scope, ?int $priorityId): ?int
-    {
-        if (!$priorityId) return null;
-
-        $valid = DB::table('global_priorities')
-            ->where('id', $priorityId)
-            ->where('scope', $scope)
-            ->where('is_active', true)
-            ->value('id');
-
-        return $valid ?: null;
-    }
-
-    /**
-     * LIST EPICS PER BOARD
-     * GET /boards/{board}/epics
-     */
     public function index(Request $request, Board $board)
     {
         if ($resp = $this->ensureBoardMember($request, $board)) return $resp;
@@ -221,50 +210,177 @@ class EpicController extends Controller
      * POST /boards/{board}/epics
      */
     public function store(Request $request, Board $board)
-    {
-        if ($resp = $this->ensureBoardMember($request, $board)) return $resp;
+{
 
-        abort_unless($request->user()?->hasPermission('create_epic'), 403);
+    if ($resp = $this->ensureBoardMember($request, $board)) return $resp;
 
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'status_id' => ['nullable', 'integer'],
-            'priority_id' => ['nullable', 'integer'],
-        ]);
+    abort_unless($request->user()?->hasPermission('create_epic'), 403);
 
-        $defaults = $this->getGlobalDefaults('EPIC');
+    $validated = $request->validate([
+        'title' => ['required', 'string', 'max:255'],
+        'description' => ['nullable', 'string'],
 
-        $statusId = $this->validateGlobalStatusId('EPIC', $validated['status_id'] ?? null)
-            ?: $defaults['status_id'];
+        // ✅ ini BOARD ids (karena FK epics -> board_statuses / board_priorities)
+        'status_id' => ['nullable', 'integer'],
+        'priority_id' => ['nullable', 'integer'],
+    ]);
 
-        $priorityId = $this->validateGlobalPriorityId('EPIC', $validated['priority_id'] ?? null)
-            ?: $defaults['priority_id'];
+    // 1) kalau user pilih manual, anggap itu BOARD master id
+    $pickedBoardStatusId = $this->validateBoardStatusId($board->uuid, 'EPIC', $validated['status_id'] ?? null);
+    $pickedBoardPriorityId = $this->validateBoardPriorityId($board->uuid, 'EPIC', $validated['priority_id'] ?? null);
 
-        if (!$statusId || !$priorityId) {
+    // 2) fallback ke global defaults → map ke board master by key
+    if (!$pickedBoardStatusId || !$pickedBoardPriorityId) {
+        $defaults = GlobalDefault::query()->where('scope', 'EPIC')->first();
+
+        if (!$defaults || !$defaults->default_status_id || !$defaults->default_priority_id) {
             return back()->with('alert', [
                 'type' => 'error',
                 'message' => 'Global defaults for EPIC are not configured yet.',
             ]);
         }
 
-        Epic::create([
-            'uuid' => (string) Str::uuid(),
-            'board_uuid' => $board->uuid,
-            'code' => UniqueCode::epic(),
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'status_id' => $statusId,
-            'priority_id' => $priorityId,
-            'created_by' => $request->user()->id,
-        ]);
+        $globalStatus = GlobalStatus::find($defaults->default_status_id);
+        $globalPriority = GlobalPriority::find($defaults->default_priority_id);
 
-        return redirect()->route('epics.index', $board)->with('alert', [
-            'type' => 'success',
-            'message' => 'Epic created.',
+        if (!$globalStatus || !$globalPriority) {
+            return back()->with('alert', [
+                'type' => 'error',
+                'message' => 'Global defaults are invalid. Please reconfigure defaults.',
+            ]);
+        }
+
+        // map global key -> board master record
+        $pickedBoardStatusId = $pickedBoardStatusId ?: $this->mapGlobalStatusToBoardStatusId(
+            $board->uuid,
+            'EPIC',
+            $globalStatus->key
+        );
+
+        $pickedBoardPriorityId = $pickedBoardPriorityId ?: $this->mapGlobalPriorityToBoardPriorityId(
+            $board->uuid,
+            'EPIC',
+            $globalPriority->key
+        );
+    }
+
+    if (!$pickedBoardStatusId || !$pickedBoardPriorityId) {
+        return back()->with('alert', [
+            'type' => 'error',
+            'message' => 'Board masters for EPIC are not configured yet (status/priority).',
         ]);
     }
 
+    Epic::create([
+        'uuid' => (string) Str::uuid(),
+        'board_uuid' => $board->uuid,
+        'code' => UniqueCode::epic(),
+        'title' => $validated['title'],
+        'description' => $validated['description'] ?? null,
+
+        // ✅ store BOARD ids (FK safe)
+        'status_id' => $pickedBoardStatusId,
+        'priority_id' => $pickedBoardPriorityId,
+
+        'created_by' => $request->user()->id,
+    ]);
+
+    return redirect()->route('epics.index', $board)->with('alert', [
+        'type' => 'success',
+        'message' => 'Epic created.',
+    ]);
+    if (!$boardStatusId || !$boardPriorityId) {
+    $keys = $this->getGlobalDefaultKeys('EPIC');
+
+    $boardStatusId = $boardStatusId ?: $this->mapBoardStatusIdByKey($board->uuid, 'EPIC', $keys['status_key']);
+    $boardPriorityId = $boardPriorityId ?: $this->mapBoardPriorityIdByKey($board->uuid, 'EPIC', $keys['priority_key']);
+}
+
+if (!$boardStatusId || !$boardPriorityId) {
+    return back()->with('alert', [
+        'type' => 'error',
+        'message' => 'Board masters for EPIC are not configured yet (status/priority).',
+    ]);
+}
+}
+
+/**
+ * ✅ Validate board master IDs
+ */
+private function validateBoardStatusId(string $boardUuid, string $scope, ?int $id): ?int
+{
+    if (!$id) return null;
+
+    $ok = BoardStatus::query()
+        ->where('id', $id)
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('is_active', 1)
+        ->exists();
+
+    return $ok ? $id : null;
+}
+
+private function validateBoardPriorityId(string $boardUuid, string $scope, ?int $id): ?int
+{
+    if (!$id) return null;
+
+    $ok = BoardPriority::query()
+        ->where('id', $id)
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('is_active', 1)
+        ->exists();
+
+    return $ok ? $id : null;
+}
+
+/**
+ * ✅ Map global default key -> board master id (with fallback)
+ */
+private function mapGlobalStatusToBoardStatusId(string $boardUuid, string $scope, string $globalKey): ?int
+{
+    $status = BoardStatus::query()
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('key', $globalKey)
+        ->where('is_active', 1)
+        ->first();
+
+    if ($status) return $status->id;
+
+    // fallback: first active by position
+    $fallback = BoardStatus::query()
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('is_active', 1)
+        ->orderBy('position')
+        ->first();
+
+    return $fallback?->id;
+}
+
+private function mapGlobalPriorityToBoardPriorityId(string $boardUuid, string $scope, string $globalKey): ?int
+{
+    $prio = BoardPriority::query()
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('key', $globalKey)
+        ->where('is_active', 1)
+        ->first();
+
+    if ($prio) return $prio->id;
+
+    // fallback: first active by position
+    $fallback = BoardPriority::query()
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('is_active', 1)
+        ->orderBy('position')
+        ->first();
+
+    return $fallback?->id;
+}
     /**
      * UPDATE EPIC
      * PATCH /epics/{epic}
@@ -296,7 +412,8 @@ class EpicController extends Controller
         if (empty($validated)) return back();
 
         if (array_key_exists('status_id', $validated)) {
-            $newStatusId = $this->validateGlobalStatusId('EPIC', $validated['status_id']);
+           $newStatusId = $this->validateBoardStatusId($epic->board_uuid, 'EPIC', $validated['status_id']);
+
             if (!$newStatusId) {
                 return back()->with('alert', [
                     'type' => 'error',
@@ -307,7 +424,8 @@ class EpicController extends Controller
         }
 
         if (array_key_exists('priority_id', $validated)) {
-            $newPriorityId = $this->validateGlobalPriorityId('EPIC', $validated['priority_id']);
+           $newPriorityId = $this->validateBoardPriorityId($epic->board_uuid, 'EPIC', $validated['priority_id']);
+
             if (!$newPriorityId) {
                 return back()->with('alert', [
                     'type' => 'error',
@@ -345,4 +463,53 @@ class EpicController extends Controller
             'message' => 'Epic deleted.',
         ]);
     }
+
+    private function mapBoardStatusIdByKey(string $boardUuid, string $scope, ?string $key): ?int
+{
+    if (!$key) return null;
+
+    $id = DB::table('board_statuses')
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('key', $key)
+        ->where('is_active', 1)
+        ->value('id');
+
+    if ($id) return (int) $id;
+
+    // fallback first active by position
+    $fallback = DB::table('board_statuses')
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('is_active', 1)
+        ->orderBy('position')
+        ->value('id');
+
+    return $fallback ? (int) $fallback : null;
+}
+
+private function mapBoardPriorityIdByKey(string $boardUuid, string $scope, ?string $key): ?int
+{
+    if (!$key) return null;
+
+    $id = DB::table('board_priorities')
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('key', $key)
+        ->where('is_active', 1)
+        ->value('id');
+
+    if ($id) return (int) $id;
+
+    // fallback first active by position
+    $fallback = DB::table('board_priorities')
+        ->where('board_uuid', $boardUuid)
+        ->where('scope', $scope)
+        ->where('is_active', 1)
+        ->orderBy('position')
+        ->value('id');
+
+    return $fallback ? (int) $fallback : null;
+}
+
 }
