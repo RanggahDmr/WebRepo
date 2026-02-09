@@ -60,6 +60,11 @@ export default function AuthenticatedLayout({
   const adminUsersPendingActive = route().current("admin.users.pending");
   const adminRolesActive = route().current("admin.roles.index");
 
+  //  Global masters flags
+  const adminGlobalStatusesActive = route().current("admin.global-statuses.*");
+  const adminGlobalPrioritiesActive = route().current("admin.global-priorities.*");
+  const adminGlobalDefaultsActive = route().current("admin.global-defaults.*");
+
   // Permissions
   const canManageBoards = can(auth, "manage_boards");
   const canManageRoles = can(auth, "manage_roles");
@@ -71,6 +76,11 @@ export default function AuthenticatedLayout({
 
   const [adminUsersOpen, setAdminUsersOpen] = useState<boolean>(
     !!(adminUsersActive || adminUsersPendingActive)
+  );
+
+  //  Masters dropdown state
+  const [adminMastersOpen, setAdminMastersOpen] = useState<boolean>(
+    !!(adminGlobalStatusesActive || adminGlobalPrioritiesActive || adminGlobalDefaultsActive)
   );
 
   // Mobile hamburger state
@@ -88,6 +98,13 @@ export default function AuthenticatedLayout({
   useEffect(() => {
     if (adminUsersActive || adminUsersPendingActive) setAdminUsersOpen(true);
   }, [adminUsersActive, adminUsersPendingActive]);
+
+  //  auto-open masters dropdown when inside masters pages
+  useEffect(() => {
+    if (adminGlobalStatusesActive || adminGlobalPrioritiesActive || adminGlobalDefaultsActive) {
+      setAdminMastersOpen(true);
+    }
+  }, [adminGlobalStatusesActive, adminGlobalPrioritiesActive, adminGlobalDefaultsActive]);
 
   // toast from flash alert
   useEffect(() => {
@@ -197,6 +214,14 @@ export default function AuthenticatedLayout({
       setOpenCreateBoard,
 
       onNavigate,
+
+      //  Global masters props
+      adminGlobalStatusesActive,
+      adminGlobalPrioritiesActive,
+      adminGlobalDefaultsActive,
+
+      adminMastersOpen,
+      setAdminMastersOpen,
     }),
     [
       auth,
@@ -216,10 +241,15 @@ export default function AuthenticatedLayout({
       canManageRoles,
       canViewMonitoring,
       openCreateBoard,
+
+      adminGlobalStatusesActive,
+      adminGlobalPrioritiesActive,
+      adminGlobalDefaultsActive,
+      adminMastersOpen,
     ]
   );
 
-  //  ESC to close right sidebar
+  // ESC to close right sidebar
   useEffect(() => {
     if (!rightSidebarOpen) return;
 
@@ -274,7 +304,7 @@ export default function AuthenticatedLayout({
             </aside>
 
             <div className="relative flex min-w-0 flex-1 h-full min-h-0">
-              {/* MAIN CONTENT (full width when sidebar closed) */}
+              {/* MAIN CONTENT */}
               <main className="min-w-0 flex-1 h-full min-h-0 overflow-y-auto">
                 <div className="pb-6">
                   {header && <div className="mb-4">{header}</div>}
@@ -282,7 +312,7 @@ export default function AuthenticatedLayout({
                 </div>
               </main>
 
-           
+              {/* RIGHT SIDEBAR (desktop xl) */}
               <aside
                 className={[
                   "hidden xl:flex h-full shrink-0 transition-[width] duration-300 ease-in-out",
@@ -303,14 +333,13 @@ export default function AuthenticatedLayout({
                 </div>
               </aside>
 
-              {/*  RIGHT SIDEBAR OVERLAY (mobile/tablet) */}
+              {/* RIGHT SIDEBAR OVERLAY (mobile/tablet) */}
               <div
                 className={[
                   "xl:hidden fixed inset-0 z-50",
                   rightSidebarOpen ? "" : "pointer-events-none",
                 ].join(" ")}
               >
-                {/* overlay */}
                 <div
                   className={[
                     "absolute inset-0 bg-black/40 transition-opacity duration-300",
@@ -319,7 +348,6 @@ export default function AuthenticatedLayout({
                   onClick={() => onCloseRightSidebar?.()}
                 />
 
-                {/* panel */}
                 <div
                   className={[
                     "absolute right-0 top-0 h-full w-[92%] max-w-[420px] bg-white shadow-xl",

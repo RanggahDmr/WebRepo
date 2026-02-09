@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Auth\LoginController;
@@ -8,7 +7,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BoardController;
 use App\Http\Controllers\BoardMemberController;
 
-use App\Http\Controllers\EpicPageController;
+use App\Http\Controllers\EpicController;
 use App\Http\Controllers\StoryController;
 use App\Http\Controllers\TaskController;
 
@@ -21,11 +20,14 @@ use App\Http\Controllers\RoleController;
 
 use App\Http\Controllers\BoardSettingsController;
 
+use App\Http\Controllers\GlobalStatusController;
+use App\Http\Controllers\GlobalPriorityController;
+use App\Http\Controllers\GlobalDefaultController;
+
+
 
 
 Route::get('/', fn () => redirect()->route('dashboard'));
-
-
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
@@ -89,6 +91,41 @@ Route::middleware('auth')->group(function () {
             Route::post('/boards/{board}/settings/priorities/reorder', [BoardSettingsController::class, 'reorderPriorities'])
                 ->name('boards.settings.priorities.reorder');
             });
+
+                    // ===== GLOBAL MASTERS =====
+        Route::middleware(['perm:manage_global_statuses'])->group(function () {
+            Route::get('/admin/global-statuses', [GlobalStatusController::class, 'index'])
+                ->name('admin.global-statuses.index');
+            Route::post('/admin/global-statuses', [GlobalStatusController::class, 'store'])
+                ->name('admin.global-statuses.store');
+            Route::patch('/admin/global-statuses/{globalStatus}', [GlobalStatusController::class, 'update'])
+                ->name('admin.global-statuses.update');
+            Route::delete('/admin/global-statuses/{globalStatus}', [GlobalStatusController::class, 'destroy'])
+                ->name('admin.global-statuses.destroy');
+            Route::patch('/admin/global-statuses/{globalStatus}/toggle', [GlobalStatusController::class, 'toggleActive'])
+                ->name('admin.global-statuses.toggle');
+        });
+
+        Route::middleware(['perm:manage_global_priorities'])->group(function () {
+            Route::get('/admin/global-priorities', [GlobalPriorityController::class, 'index'])
+                ->name('admin.global-priorities.index');
+            Route::post('/admin/global-priorities', [GlobalPriorityController::class, 'store'])
+                ->name('admin.global-priorities.store');
+            Route::patch('/admin/global-priorities/{globalPriority}', [GlobalPriorityController::class, 'update'])
+                ->name('admin.global-priorities.update');
+            Route::delete('/admin/global-priorities/{globalPriority}', [GlobalPriorityController::class, 'destroy'])
+                ->name('admin.global-priorities.destroy');
+            Route::patch('/admin/global-priorities/{globalPriority}/toggle', [GlobalPriorityController::class, 'toggleActive'])
+                ->name('admin.global-priorities.toggle');
+        });
+
+        Route::middleware(['perm:manage_global_defaults'])->group(function () {
+            Route::get('/admin/global-defaults', [GlobalDefaultController::class, 'index'])
+                ->name('admin.global-defaults.index');
+            Route::patch('/admin/global-defaults/{globalDefault}', [GlobalDefaultController::class, 'update'])
+                ->name('admin.global-defaults.update');
+        });
+
                 });
 
     // App
@@ -104,7 +141,7 @@ Route::middleware('auth')->group(function () {
             ->name('boards.show');
 
         Route::delete('/boards/{board}', [BoardController::class, 'destroy'])
-            ->middleware('perm:deleted_boards')
+            ->middleware('perm:delete_board')
             ->name('boards.destroy');
 
         // board members
@@ -113,38 +150,39 @@ Route::middleware('auth')->group(function () {
             ->name('boards.members.store');
 
         Route::delete('/boards/{board}/members/{user}', [BoardMemberController::class, 'destroy'])
-            ->middleware('perm:deleted_members')
+            ->middleware('perm:delete_member')
             ->name('boards.members.destroy');
 
-        // epics / stories / tasks (sementara tetap)
-        Route::get('/boards/{board}/epics', [EpicPageController::class, 'index'])->name('epics.index');
-        Route::get('/epics/{epic}', [EpicPageController::class, 'show'])->name('epics.show');
+        // epics / stories / tasks
+        Route::get('/boards/{board}/epics', [EpicController::class, 'index'])->name('epics.index');
+        Route::get('/epics/{epic}', [EpicController::class, 'show'])->name('epics.show');
 
-        Route::post('/boards/{board}/epics', [EpicPageController::class, 'store'])
+        Route::post('/boards/{board}/epics', [EpicController::class, 'store'])
             ->middleware('perm:create_epic')
             ->name('epics.store');
 
-        Route::patch('/epics/{epic}', [EpicPageController::class, 'update'])
+        Route::patch('/epics/{epic}', [EpicController::class, 'update'])
             ->middleware('perm:update_epic')
             ->name('epics.update');
 
-        Route::delete('/epics/{epic}', [EpicPageController::class, 'destroy'])
-            ->middleware('perm:deleted_epic') // sementara
+        Route::delete('/epics/{epic}', [EpicController::class, 'destroy'])
+            ->middleware('perm:delete_epic') // sementara
             ->name('epics.destroy');
 
         Route::get('/stories/{story}', [StoryController::class, 'show'])->name('stories.show');
 
-        Route::post('/epics/{epic}/stories', [EpicPageController::class, 'storeStory'])
+        Route::post('/epics/{epic}/stories', [StoryController::class, 'store'])
             ->middleware('perm:create_story')
             ->name('stories.store');
 
-        Route::patch('/stories/{story}', [EpicPageController::class, 'updateStory'])
+        Route::patch('/stories/{story}', [StoryController::class, 'update'])
             ->middleware('perm:update_story')
             ->name('stories.update');
 
-        Route::delete('/stories/{story}', [EpicPageController::class, 'destroyStory'])
-            ->middleware('perm:deleted_story') // sementara
+        Route::delete('/stories/{story}', [StoryController::class, 'destroy'])
+            ->middleware('perm:delete_story') // sementara
             ->name('stories.destroy');
+
 
         Route::get('/stories/{story}/tasks', [TaskController::class, 'index'])->name('tasks.index');
 
@@ -157,7 +195,7 @@ Route::middleware('auth')->group(function () {
             ->name('tasks.update');
 
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])
-            ->middleware('perm:deleted_task') // sementara
+            ->middleware('perm:delete_task') // sementara
             ->name('tasks.destroy');
 
         // history / monitoring
@@ -169,10 +207,4 @@ Route::middleware('auth')->group(function () {
         Route::get('/monitoring', [MonitoringController::class, 'index'])
             ->middleware('perm:view_monitoring')
             ->name('monitoring.index');
-
-
-            
-
-     
     });
-

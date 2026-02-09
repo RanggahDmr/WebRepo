@@ -5,119 +5,167 @@ namespace App\Http\Controllers;
 use App\Models\Story;
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use App\Support\UniqueCode;
 use App\Support\BoardAccess;
-use App\Models\BoardStatus;
-use App\Models\BoardPriority;
-use App\Services\BoardMasterResolver;
 
 class TaskController extends Controller
 {
-  public function index(Request $request, Story $story)
-{
-    $user = $request->user();
+    /**
+     * Ambil global defaults untuk scope tertentu
+     */
+    private function getGlobalDefaults(string $scope): array
+    {
+        $row = DB::table('global_defaults')
+            ->where('scope', $scope)
+            ->first(['default_status_id', 'default_priority_id']);
 
-    // load relations needed for summary + permissions
-    $story->load([
-        'epic.board',
-        'creator:id,name',
-        'epic.creator:id,name',
-        'statusMaster:id,key,name,color,is_done',
-        'priorityMaster:id,key,name,color',
-    ]);
-
-    $board = $story->epic?->board;
-
-    if (!$board) {
-        return redirect()->route('dashboard')->with('alert', [
-            'type' => 'error',
-            'message' => 'Board not found for this story.',
-        ]);
+        return [
+            'status_id' => $row?->default_status_id,
+            'priority_id' => $row?->default_priority_id,
+        ];
     }
 
-    if (!BoardAccess::canAccess($user, $board)) {
-        return redirect()->route('dashboard')->with('alert', [
-            'type' => 'error',
-            'message' => "You don't have access to this board.",
-        ]);
+    /**
+     * Validasi status_id untuk scope tertentu
+     */
+    private function validateGlobalStatusId(string $scope, ?int $statusId): ?int
+    {
+        if (!$statusId) return null;
+
+        $valid = DB::table('global_statuses')
+            ->where('id', $statusId)
+            ->where('scope', $scope)
+            ->where('is_active', true)
+            ->value('id');
+
+        return $valid ?: null;
     }
 
-    $taskStatuses = BoardStatus::query()
-        ->where('board_uuid', $board->uuid)
-        ->where('scope', 'TASK')
-        ->where('is_active', true)
-        ->orderBy('position')
-        ->get(['id', 'key', 'name', 'color', 'is_done', 'is_default']);
+    /**
+     * Validasi priority_id untuk scope tertentu
+     */
+    private function validateGlobalPriorityId(string $scope, ?int $priorityId): ?int
+    {
+        if (!$priorityId) return null;
 
-    $taskPriorities = BoardPriority::query()
-        ->where('board_uuid', $board->uuid)
-        ->where('scope', 'TASK')
-        ->where('is_active', true)
-        ->orderBy('position')
-        ->get(['id', 'key', 'name', 'color', 'is_default']);
+        $valid = DB::table('global_priorities')
+            ->where('id', $priorityId)
+            ->where('scope', $scope)
+            ->where('is_active', true)
+            ->value('id');
 
-    $tasks = $story->tasks()
-        ->with([
+        return $valid ?: null;
+    }
+
+    /**
+     * GET /stories/{story}/tasks
+     * Render Task board / list
+     */
+    public function index(Request $request, Story $story)
+    {
+        $user = $request->user();
+
+        // Load board untuk access check + summary FE
+        $story->load([
+            'epic.board',
             'creator:id,name',
-            'assignee:id,name,role',
+            'epic.creator:id,name',
+
+            // master relation (kalau sudah kamu define di model)
             'statusMaster:id,key,name,color,is_done',
             'priorityMaster:id,key,name,color',
-        ])
-        ->orderBy('position')
-        ->get();
+        ]);
 
-    return Inertia::render('Tasks/TaskBoard', [
-        'board' => $board->only(['uuid', 'squad_code', 'title', 'created_at']),
+        $board = $story->epic?->board;
 
-        // keep epic top-level in case TaskBoard.tsx still expects it
-        'epic' => $story->epic ? [
-            'uuid' => $story->epic->uuid,
-            'code' => $story->epic->code ?? null,
-            'title' => $story->epic->title ?? null,
-            'creator' => $story->epic->creator?->only(['id', 'name']),
-        ] : null,
+        if (!$board) {
+            return redirect()->route('dashboard')->with('alert', [
+                'type' => 'error',
+                'message' => 'Board not found for this story.',
+            ]);
+        }
 
-        // explicit story for consistent FE fields
-        'story' => [
-            ...$story->only([
-                'uuid',
-                'epic_uuid',
-                'code',
-                'title',
-                'description',
-                'priority',
-                'status',
-                'priority_id',
-                'status_id',
-                'created_by',
-                'created_at',
-                'updated_at',
-            ]),
-            'creator' => $story->creator?->only(['id', 'name']),
-            'statusMaster' => $story->statusMaster
-                ? $story->statusMaster->only(['id', 'key', 'name', 'color', 'is_done'])
-                : null,
-            'priorityMaster' => $story->priorityMaster
-                ? $story->priorityMaster->only(['id', 'key', 'name', 'color'])
-                : null,
+        if (!BoardAccess::canAccess($user, $board)) {
+            return redirect()->route('dashboard')->with('alert', [
+                'type' => 'error',
+                'message' => "You don't have access to this board.",
+            ]);
+        }
 
-            // also include epic nested so StorySummary can read story.epic.creator safely
+        // Global master options for TASK
+        $taskStatuses = DB::table('global_statuses')
+            ->where('scope', 'TASK')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'key', 'name', 'color', 'is_done', 'is_active']);
+
+        $taskPriorities = DB::table('global_priorities')
+            ->where('scope', 'TASK')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'key', 'name', 'color', 'is_active']);
+
+        // Tasks list
+        $tasks = $story->tasks()
+            ->with([
+                'creator:id,name',
+                'assignee:id,name', // users.role sudah di-drop
+                'statusMaster:id,key,name,color,is_done',
+                'priorityMaster:id,key,name,color',
+            ])
+            ->orderBy('position')
+            ->get();
+
+        return Inertia::render('Tasks/TaskBoard', [
+            'board' => $board->only(['uuid', 'title', 'created_at']),
+
             'epic' => $story->epic ? [
                 'uuid' => $story->epic->uuid,
+                'code' => $story->epic->code ?? null,
+                'title' => $story->epic->title ?? null,
                 'creator' => $story->epic->creator?->only(['id', 'name']),
             ] : null,
-        ],
 
-        'tasks' => $tasks,
-        'taskStatuses' => $taskStatuses,
-        'taskPriorities' => $taskPriorities,
-    ]);
-}
+            'story' => [
+                ...$story->only([
+                    'uuid',
+                    'epic_uuid',
+                    'code',
+                    'title',
+                    'description',
+                    'priority_id',
+                    'status_id',
+                    'created_by',
+                    'created_at',
+                    'updated_at',
+                ]),
+                'creator' => $story->creator?->only(['id', 'name']),
+                'statusMaster' => $story->statusMaster
+                    ? $story->statusMaster->only(['id', 'key', 'name', 'color', 'is_done'])
+                    : null,
+                'priorityMaster' => $story->priorityMaster
+                    ? $story->priorityMaster->only(['id', 'key', 'name', 'color'])
+                    : null,
+                'epic' => $story->epic ? [
+                    'uuid' => $story->epic->uuid,
+                    'creator' => $story->epic->creator?->only(['id', 'name']),
+                ] : null,
+            ],
 
+            'tasks' => $tasks,
+            'taskStatuses' => $taskStatuses,
+            'taskPriorities' => $taskPriorities,
+        ]);
+    }
 
-    public function store(Request $request, Story $story, BoardMasterResolver $resolver)
+    /**
+     * POST /stories/{story}/tasks
+     * Create new task with global defaults (TASK scope)
+     */
+    public function store(Request $request, Story $story)
     {
         $user = $request->user();
 
@@ -138,7 +186,6 @@ class TaskController extends Controller
             ]);
         }
 
-        //  RBAC (no hardcode role)
         if (!method_exists($user, 'hasPermission') || !$user->hasPermission('create_task')) {
             return back()->with('alert', [
                 'type' => 'error',
@@ -147,96 +194,46 @@ class TaskController extends Controller
         }
 
         $validated = $request->validate([
-            'priority_id' => ['required', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+
+            // optional override
             'status_id' => ['nullable', 'integer'],
+            'priority_id' => ['nullable', 'integer'],
+
+            'assignee_id' => ['nullable', 'integer'],
         ]);
 
-        $priorityId = BoardPriority::query()
-            ->where('id', $validated['priority_id'])
-            ->where('board_uuid', $board->uuid)
-            ->where('scope', 'TASK')
-            ->where('is_active', true)
-            ->value('id');
+        $defaults = $this->getGlobalDefaults('TASK');
 
-        if (!$priorityId) {
+        $statusId = $this->validateGlobalStatusId('TASK', $validated['status_id'] ?? null)
+            ?: $defaults['status_id'];
+
+        $priorityId = $this->validateGlobalPriorityId('TASK', $validated['priority_id'] ?? null)
+            ?: $defaults['priority_id'];
+
+        if (!$statusId || !$priorityId) {
             return back()->with('alert', [
                 'type' => 'error',
-                'message' => 'Invalid priority for this board.',
+                'message' => 'Global defaults for TASK are not configured yet.',
             ]);
         }
 
-        $statusId = null;
-
-        if (!empty($validated['status_id'])) {
-            $statusId = BoardStatus::query()
-                ->where('id', $validated['status_id'])
-                ->where('board_uuid', $board->uuid)
-                ->where('scope', 'TASK')
-                ->where('is_active', true)
-                ->value('id');
-
-            if (!$statusId) {
-                return back()->with('alert', [
-                    'type' => 'error',
-                    'message' => 'Invalid status for this board.',
-                ]);
-            }
-        }
-
-        if (!$statusId) {
-            $statusId = BoardStatus::query()
-                ->where('board_uuid', $board->uuid)
-                ->where('scope', 'TASK')
-                ->where('is_default', true)
-                ->where('is_active', true)
-                ->value('id');
-        }
-
-        if (!$statusId) {
-            return back()->with('alert', [
-                'type' => 'error',
-                'message' => 'No default TASK status configured for this board.',
-            ]);
-        }
-
-        $position = $story->tasks()
-            ->where('status_id', $statusId)
-            ->max('position');
-
-        $priorityKey = BoardPriority::where('id', $priorityId)->value('key');
-        $statusKey = BoardStatus::where('id', $statusId)->value('key');
-
-        $legacyPriorityMap = [
-            'low' => 'LOW',
-            'medium' => 'MEDIUM',
-            'high' => 'HIGH',
-        ];
-
-        $legacyStatusMap = [
-            'backlog' => 'TODO',
-            'in_progress' => 'IN_PROGRESS',
-            'in_review' => 'IN_REVIEW',
-            'done' => 'DONE',
-        ];
+        // Next position in story (simple)
+        $nextPos = (int) ($story->tasks()->max('position') ?? -1) + 1;
 
         $story->tasks()->create([
             'uuid' => (string) Str::uuid(),
             'code' => UniqueCode::task(),
 
-            'priority_id' => $priorityId,
             'status_id' => $statusId,
-
-            // legacy
-            'priority' => $legacyPriorityMap[$priorityKey] ?? 'MEDIUM',
-            'status' => $legacyStatusMap[$statusKey] ?? 'TODO',
+            'priority_id' => $priorityId,
 
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
 
-            'position' => ($position ?? -1) + 1,
-            'assignee_id' => null,
+            'position' => $nextPos,
+            'assignee_id' => $validated['assignee_id'] ?? null,
             'created_by' => $user->id,
         ]);
 
@@ -246,182 +243,85 @@ class TaskController extends Controller
         ]);
     }
 
-   public function update(Request $request, Task $task)
-{
-    $user = $request->user();
+    /**
+     * PATCH /tasks/{task}
+     * Update task (status_id/priority_id validated to TASK scope)
+     */
+    public function update(Request $request, Task $task)
+    {
+        $user = $request->user();
 
-    $task->load(['story.epic.board']);
-    $board = $task->story?->epic?->board;
+        $task->load(['story.epic.board']);
+        $board = $task->story?->epic?->board;
 
-    if (!$board) {
-        return redirect()->route('dashboard')->with('alert', [
-            'type' => 'error',
-            'message' => 'Board not found for this task.',
+        if (!$board) {
+            return redirect()->route('dashboard')->with('alert', [
+                'type' => 'error',
+                'message' => 'Board not found for this task.',
+            ]);
+        }
+
+        if (!BoardAccess::canAccess($user, $board)) {
+            return redirect()->route('dashboard')->with('alert', [
+                'type' => 'error',
+                'message' => "You don't have access to this board.",
+            ]);
+        }
+
+        if (!method_exists($user, 'hasPermission') || !$user->hasPermission('update_task')) {
+            return back()->with('alert', [
+                'type' => 'error',
+                'message' => "You don't have permission to update tasks.",
+            ]);
+        }
+
+        $validated = $request->validate([
+            'title' => ['sometimes', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'position' => ['sometimes', 'nullable', 'integer'],
+            'assignee_id' => ['sometimes', 'nullable', 'integer'],
+
+            'status_id' => ['sometimes', 'nullable', 'integer'],
+            'priority_id' => ['sometimes', 'nullable', 'integer'],
         ]);
-    }
 
-    if (!BoardAccess::canAccess($user, $board)) {
-        return redirect()->route('dashboard')->with('alert', [
-            'type' => 'error',
-            'message' => "You don't have access to this board.",
-        ]);
-    }
+        if (empty($validated)) return back();
 
-    if (!method_exists($user, 'hasPermission') || !$user->hasPermission('update_task')) {
+        // Validate status_id if provided
+        if (array_key_exists('status_id', $validated)) {
+            $newStatusId = $this->validateGlobalStatusId('TASK', $validated['status_id']);
+            if (!$newStatusId) {
+                return back()->with('alert', [
+                    'type' => 'error',
+                    'message' => 'Invalid status for TASK scope.',
+                ]);
+            }
+            $validated['status_id'] = $newStatusId;
+        }
+
+        // Validate priority_id if provided
+        if (array_key_exists('priority_id', $validated)) {
+            $newPriorityId = $this->validateGlobalPriorityId('TASK', $validated['priority_id']);
+            if (!$newPriorityId) {
+                return back()->with('alert', [
+                    'type' => 'error',
+                    'message' => 'Invalid priority for TASK scope.',
+                ]);
+            }
+            $validated['priority_id'] = $newPriorityId;
+        }
+
+        $task->update($validated);
+
         return back()->with('alert', [
-            'type' => 'error',
-            'message' => "You don't have permission to update tasks.",
+            'type' => 'success',
+            'message' => 'Task updated.',
         ]);
     }
 
-    $validated = $request->validate([
-        'status_id' => ['sometimes', 'nullable', 'integer'],
-        'priority_id' => ['sometimes', 'nullable', 'integer'],
-        'status' => ['sometimes', 'nullable', 'string'],
-        'priority' => ['sometimes', 'nullable', 'string'],
-        'position' => ['sometimes', 'nullable', 'integer'],
-        'title' => ['sometimes', 'string', 'max:255'],
-        'description' => ['sometimes', 'nullable', 'string'],
-    ]);
-
-    if (empty($validated)) return back();
-
-    $wantsStatus =
-        array_key_exists('status_id', $validated) ||
-        array_key_exists('status', $validated);
-
-    $wantsPriority =
-        array_key_exists('priority_id', $validated) ||
-        array_key_exists('priority', $validated);
-
-    // ========= RESOLVE STATUS (only if requested) =========
-    if ($wantsStatus) {
-        $targetStatus = null;
-
-        if (!empty($validated['status_id'])) {
-            $targetStatus = BoardStatus::query()
-                ->where('id', $validated['status_id'])
-                ->where('board_uuid', $board->uuid)
-                ->where('scope', 'TASK')
-                ->where('is_active', true)
-                ->first();
-        }
-
-        if (!$targetStatus && !empty($validated['status'])) {
-            $map = [
-                'TODO' => 'backlog',
-                'BACKLOG' => 'backlog',
-                'IN_PROGRESS' => 'in_progress',
-                'IN_REVIEW' => 'in_review',
-                'DONE' => 'done',
-            ];
-
-            $legacy = strtoupper(trim($validated['status']));
-            $key = $map[$legacy] ?? null;
-
-            if ($key) {
-                $targetStatus = BoardStatus::query()
-                    ->where('board_uuid', $board->uuid)
-                    ->where('scope', 'TASK')
-                    ->where('key', $key)
-                    ->where('is_active', true)
-                    ->first();
-            }
-        }
-
-        if (!$targetStatus) {
-            return back()->with('alert', [
-                'type' => 'error',
-                'message' => 'Invalid target status.',
-            ]);
-        }
-
-        $legacyStatusString = match ($targetStatus->key) {
-            'backlog' => 'TODO',
-            'in_progress' => 'IN_PROGRESS',
-            'in_review' => 'IN_REVIEW',
-            'done' => 'DONE',
-            default => strtoupper($targetStatus->name),
-        };
-
-        $validated['status_id'] = $targetStatus->id;
-        $validated['status'] = $legacyStatusString;
-    }
-
-    // ========= RESOLVE PRIORITY (only if requested) =========
-    if ($wantsPriority) {
-        $targetPriority = null;
-
-        if (!empty($validated['priority_id'])) {
-            $targetPriority = BoardPriority::query()
-                ->where('id', $validated['priority_id'])
-                ->where('board_uuid', $board->uuid)
-                ->where('scope', 'TASK')
-                ->where('is_active', true)
-                ->first();
-        }
-
-        if (!$targetPriority && !empty($validated['priority'])) {
-            $map = [
-                'LOW' => 'low',
-                'MEDIUM' => 'medium',
-                'HIGH' => 'high',
-            ];
-
-            $legacy = strtoupper(trim($validated['priority']));
-            $key = $map[$legacy] ?? null;
-
-            if ($key) {
-                $targetPriority = BoardPriority::query()
-                    ->where('board_uuid', $board->uuid)
-                    ->where('scope', 'TASK')
-                    ->where('key', $key)
-                    ->where('is_active', true)
-                    ->first();
-            }
-        }
-
-        if (!$targetPriority) {
-            return back()->with('alert', [
-                'type' => 'error',
-                'message' => 'Invalid target priority.',
-            ]);
-        }
-
-        $legacyPriorityString = match ($targetPriority->key) {
-            'low' => 'LOW',
-            'medium' => 'MEDIUM',
-            'high' => 'HIGH',
-            default => strtoupper($targetPriority->name),
-        };
-
-        $validated['priority_id'] = $targetPriority->id;
-        $validated['priority'] = $legacyPriorityString;
-    }
-
-    // ========= UPDATE (only fields that passed validation) =========
-    $payload = [];
-
-    foreach ([
-        'title', 'description',
-        'status_id', 'status',
-        'priority_id', 'priority',
-        'position',
-    ] as $k) {
-        if (array_key_exists($k, $validated)) $payload[$k] = $validated[$k];
-    }
-
-    if (empty($payload)) return back();
-
-    $task->update($payload);
-
-    return back()->with('alert', [
-        'type' => 'success',
-        'message' => 'Task updated.',
-    ]);
-}
-
-
+    /**
+     * DELETE /tasks/{task}
+     */
     public function destroy(Request $request, Task $task)
     {
         abort_unless($request->user()?->hasPermission('delete_task'), 403);
@@ -443,9 +343,4 @@ class TaskController extends Controller
             'message' => 'Task deleted.',
         ]);
     }
-    public function getRouteKeyName()
-{
-    return 'uuid';
-}
-
 }

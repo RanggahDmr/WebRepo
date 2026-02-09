@@ -17,9 +17,6 @@ class Story extends Model
   'title',
   'description',
 
-  // legacy
-  'priority',
-  'status',
 
   // new master ids
   'priority_id',

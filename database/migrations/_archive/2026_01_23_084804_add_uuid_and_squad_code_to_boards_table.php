@@ -47,7 +47,7 @@ return new class extends Migration {
         // Unique aman di MySQL/PG/SQLite
         Schema::table('boards', function (Blueprint $table) {
             $table->unique('uuid', 'boards_uuid_unique');
-            $table->index('squad_code', 'boards_squad_code_index');
+            $table->index( 'boards_squad_code_index');
         });
 
         /**

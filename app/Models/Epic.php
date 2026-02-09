@@ -14,8 +14,6 @@ class Epic extends Model
         'code',
         'title',
         'description',
-        'priority',
-        'status',
         'status_id',
         'priority_id',
         'created_by',

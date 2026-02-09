@@ -61,7 +61,7 @@ class BoardSettingsController extends Controller
             ->get();
 
         return Inertia::render('Boards/Settings', [
-            'board' => $board->only(['uuid', 'title', 'squad_code', 'created_at']),
+            'board' => $board->only(['uuid', 'title',  'created_at']),
             'canManageSettings' => $canManage,
             'scopes' => $this->scopes,
             'statuses' => $statuses,
@@ -232,8 +232,7 @@ class BoardSettingsController extends Controller
             'level' => ['nullable', 'integer', 'min:0'],
             'position' => ['nullable', 'integer', 'min:0'],
             'color' => ['nullable', 'string', 'max:255'],
-            'is_default' => ['boolean'],
-            'is_locked' => ['boolean'],
+     
             'is_active' => ['boolean'],
         ]);
 
@@ -263,8 +262,7 @@ class BoardSettingsController extends Controller
             'level' => $data['level'] ?? 0,
             'position' => $data['position'] ?? (($nextPos ?? -1) + 1),
              'color' => $data['color'] ?? $this->randomNiceColor(),
-            'is_default' => (bool)($data['is_default'] ?? false),
-            'is_locked' => (bool)($data['is_locked'] ?? false),
+        
             'is_active' => (bool)($data['is_active'] ?? true),
         ]);
 

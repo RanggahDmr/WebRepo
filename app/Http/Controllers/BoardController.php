@@ -31,7 +31,7 @@ public function index(Request $request)
         //  SELALU filter by membership (semua user)
         ->whereHas('members', fn ($q) => $q->where('users.id', $user->id))
         ->latest('updated_at')
-        ->get(['uuid','squad_code','title','created_by','created_at','updated_at']);
+        ->get(['uuid','title','created_by','created_at','updated_at']);
 
     $users = User::query()
         ->with(['roles' => fn ($q) => $q->select($roleSelect)])
@@ -88,7 +88,7 @@ public function index(Request $request)
             ->get(['users.id', 'users.name', 'users.email']);
 
         return Inertia::render('Boards/Show', [
-            'board' => $board->only(['uuid', 'squad_code', 'title', 'created_at', 'updated_at']) + [
+            'board' => $board->only(['uuid',  'title', 'created_at', 'updated_at']) + [
                 'creator' => $board->creator,
             ],
             'epics' => $epics,
@@ -127,7 +127,7 @@ public function index(Request $request)
 
         $board->members()->syncWithoutDetaching($memberIds);
 
-        $masterSeeder->seedDefaultsForBoard($board);
+        // $masterSeeder->seedDefaultsForBoard($board);
 
         return $board;
         });

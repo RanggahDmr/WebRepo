@@ -22,10 +22,6 @@ class Task extends Model
         'priority_id',
         'status_id',
 
-        // legacy strings (optional, bisa kamu hapus nanti)
-        'priority',
-        'status',
-
         'title',
         'description',
         'type',

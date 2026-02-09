@@ -14,7 +14,7 @@ class Board extends Model
     // public $incrementing = false;
     // protected $keyType = 'string';
 
-    protected $fillable = ['uuid', 'squad_code', 'title', 'created_by'];
+    protected $fillable = ['uuid',  'title', 'created_by'];
 
     public function getRouteKeyName()
     {
