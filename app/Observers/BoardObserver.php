@@ -15,7 +15,7 @@ class BoardObserver
             $scopes = ['EPIC', 'STORY', 'TASK'];
 
             foreach ($scopes as $scope) {
-                // ===== copy global_statuses -> board_statuses =====
+                // copy statuses
                 $gStatuses = DB::table('global_statuses')
                     ->where('scope', $scope)
                     ->where('is_active', 1)
@@ -31,17 +31,15 @@ class BoardObserver
                         ],
                         [
                             'name' => $gs->name,
-                            'position' => (int) ($gs->sort_order ?? 0),
                             'color' => $gs->color,
+                            'position' => (int) ($gs->sort_order ?? 0),
                             'is_done' => (bool) $gs->is_done,
                             'is_active' => true,
-                            'created_at' => now(),
-                            'updated_at' => now(),
                         ]
                     );
                 }
 
-                // ===== copy global_priorities -> board_priorities =====
+                // copy priorities
                 $gPriorities = DB::table('global_priorities')
                     ->where('scope', $scope)
                     ->where('is_active', 1)
@@ -57,11 +55,10 @@ class BoardObserver
                         ],
                         [
                             'name' => $gp->name,
-                            'position' => (int) ($gp->sort_order ?? 0),
                             'color' => $gp->color,
+                            'position' => (int) ($gp->sort_order ?? 0),
+                            'level' => 0,       // kalau kolom ada
                             'is_active' => true,
-                            'created_at' => now(),
-                            'updated_at' => now(),
                         ]
                     );
                 }
